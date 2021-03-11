@@ -1,0 +1,25 @@
+<div class="editor"
+  {{? this.debug }}data-debug{{?}}
+  >
+  <control control="CPHFindReplace" name="find-replace"></control>
+  <div class="read-only">
+    read only <span data-language></span>
+  </div>
+  <div class="line-container">
+    <div class="line-numbers"></div>
+  </div>
+  <div class="edit-text">
+    <div class="scrollbar vertical"><div class="scroller"></div></div>
+    <div class="scrollbar horizontal"><div class="scroller"></div></div>
+    <textarea
+      spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      wrap="off"
+      tabIndex="-1"></textarea>
+    <div class="render"></div>
+    <div class="render sample"><div class="line"><span class="fill">x</span></div></div>
+    <div class="render limit"><span class="fill">{{= 'W'.repeat(80) }}</span></div>
+  </div>
+</div>

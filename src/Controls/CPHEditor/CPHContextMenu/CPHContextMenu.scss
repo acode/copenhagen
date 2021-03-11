@@ -1,0 +1,97 @@
+control[control="CPHContextMenu"] {
+
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  z-index: 1000;
+  padding: $half-unit 0px;
+  background-color: $grey-xx-light;
+  border-radius: $base-radius;
+  box-shadow: $strong-shadow;
+  border: 1px solid $color-darken-secondary;
+
+  hr {
+    border: 0;
+    height: 1px;
+    margin: $half-unit 0px;
+    background-color: $color-darken-tertiary;
+  }
+
+  .item {
+    height: $size-small + $size-x-small;
+    display: flex;
+    padding: 0px $size-x-small;
+    overflow: hidden;
+    align-items: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: $color-text-highlight;
+    cursor: pointer;
+    &:active, &:link, &:visited {
+      text-decoration: none;
+    }
+    &.disabled,
+    &.disabled:hover,
+    &.disabled .title,
+    &.disabled .shortcut,
+    &.disabled svg {
+      color: $color-text-disabled !important;
+      background-color: transparent;
+      cursor: auto;
+    }
+    &:hover {
+      background-color: $blue-main;
+      color: $white;
+      .title svg {
+        color: $blue-light;
+      }
+      .shortcut {
+        color: $blue-light;
+      }
+    }
+    .title {
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      padding-right: $size-x-small;
+      svg {
+        color: $color-darken-primary;
+        flex-grow: 0;
+        width: $size-x-small + $half-unit;
+        margin-right: $size-x-small;
+      }
+      em {
+        font-style: normal;
+        font-size: 10px;
+        opacity: 0.6;
+        &.yes, &.no, &.maybe {
+          margin-left: $half-unit;
+        }
+        &.yes {
+          color: $green-dark;
+        }
+        &.no {
+          color: $red-dark;
+        }
+        &.maybe {
+          color: $grey-dark;
+        }
+      }
+    }
+    .shortcut {
+      flex-grow: 0;
+      display: flex;
+      align-items: center;
+      color: $color-text-tertiary;
+      font-size: 10px;
+      svg {
+        color: currentColor;
+        flex-grow: 0;
+        width: $size-x-small;
+        height: $size-x-small;
+      }
+    }
+  }
+
+}

@@ -1,0 +1,449 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;600&display=swap');
+
+@font-face {
+  font-family: 'Monospace1';
+  src: local('Menlo');
+  font-weight: 500 !important;
+}
+@font-face {
+  font-family: 'Monospace2';
+  src: local('Monaco');
+  font-weight: 500 !important;
+}
+@font-face {
+  font-family: 'Monospace3';
+  src: local('Consolas');
+  font-weight: 500 !important;
+}
+
+// Theme Colors
+$colors: (
+  'white': ('main': #FFFFFF),
+  'black': ('main': #111111),
+  'grey': (
+    'xx-dark':  #111111,
+    'x-dark':   #333333,
+    'dark':     #666666,
+    'main':     #AAAAAA,
+    'light':    #DDDDDD,
+    'x-light':  #EFEFEF,
+    'xx-light': #F8F8F8
+  ),
+  'blue': (
+    'x-dark':     #0A0777,
+    'dark':       #1A16B4,
+    'main':       #3556E3,
+    'light':      #70E2FF,
+    'x-light':    #E6F8FF
+  ),
+  'red': (
+    'x-dark':   #800400,
+    'dark':     #BD2222,
+    'main':     #E01E1E,
+    'light':    #FFAA99,
+    'x-light':  #FFF5F4
+  ),
+  'green': (
+    'x-dark':    #00420B,
+    'dark':      #006410,
+    'main':      #1C9B40,
+    'light':     #45DD98,
+    'x-light':   #D9FFEF
+  ),
+  'purple': (
+    'x-dark':   #490082,
+    'dark':     #7A1DAB,
+    'main':     #AE2AF4,
+    'light':    #CEA3F6,
+    'x-light':  #FBF7FF
+  ),
+  'orange': (
+    'x-dark':   #A42700,
+    'dark':     #F06800,
+    'main':     #FF9E29,
+    'light':    #FFD28E,
+    'x-light':  #FFFADC
+  ),
+  'yellow': (
+    'x-dark':   #AE5E00,
+    'dark':     #FFB108,
+    'main':     #FFD550,
+    'light':    #FFF8B7,
+    'x-light':  #FFFEF0
+  )
+);
+
+@function color($base, $variant: 'main') {
+  @return map-get(map-get($colors, $base), $variant);
+}
+
+$white:           #FFFFFF;
+$black:           #111111;
+$pure-black:      #000000;
+
+$grey-xx-dark:    #111111;
+$grey-x-dark:     #333333;
+$grey-dark:       #666666;
+$grey-main:       #AAAAAA;
+$grey-light:      #DDDDDD;
+$grey-x-light:    #EFEFEF;
+$grey-xx-light:   #F8F8F8;
+
+$blue-x-dark:     #0A0777;
+$blue-dark:       #1A16B4;
+$blue-main:       #3556E3;
+$blue-light:      #70E2FF;
+$blue-x-light:    #E6F8FF;
+
+$red-x-dark:      #800400;
+$red-dark:        #BD2222;
+$red-main:        #E01E1E;
+$red-light:       #FFAA99;
+$red-x-light:     #FFF5F4;
+
+$green-x-dark:    #00420B;
+$green-dark:      #006410;
+$green-main:      #1C9B40;
+$green-light:     #45DD98;
+$green-x-light:   #D9FFEF;
+
+$purple-x-dark:   #490082;
+$purple-dark:     #7A1DAB;
+$purple-main:     #AE2AF4;
+$purple-light:    #CEA3F6;
+$purple-x-light:  #FBF7FF;
+
+$orange-x-dark:   #A42700;
+$orange-dark:     #F06800;
+$orange-main:     #FF9E29;
+$orange-light:    #FFD28E;
+$orange-x-light:  #FFFADC;
+
+$yellow-x-dark:   #AE5E00;
+$yellow-dark:     #FFB108;
+$yellow-main:     #FFD550;
+$yellow-light:    #FFF8B7;
+$yellow-x-light:  #FFFEF0;
+
+$color-production: $green-dark;
+$color-development: $orange-dark;
+
+$color-separator-primary:    $grey-x-light;
+$color-separator-secondary:  $grey-light;
+$color-separator-tertiary:   $grey-main;
+$color-separator-quartenary: $grey-dark;
+
+$color-bg-important: $white;
+$color-bg-primary:   $grey-xx-light;
+$color-bg-secondary: $grey-x-light;
+$color-bg-tertiary:  $grey-light;
+$color-bg-disabled:  $grey-light;
+$color-bg-highlight: rgba($grey-x-dark, 0.1);
+
+$color-text-highlight: $grey-xx-dark;
+$color-text-primary: $grey-xx-dark;
+$color-text-secondary: $grey-x-dark;
+$color-text-tertiary: $grey-dark;
+$color-text-semi-fade: $grey-main;
+$color-text-disabled: $grey-light;
+$color-text-transparent-light: rgba($white, 0.4);
+$color-text-transparent-dark: rgba($white, 0.2);
+
+$color-outline-blue: $blue-main;
+
+// Action Colors
+$color-bg-alert: $red-dark;
+$color-bg-okay: $green-dark;
+
+$color-text-success: $green-main;
+$color-text-error: $red-main;
+$color-text-warning: $orange-main;
+
+$color-action-share: $purple-dark;
+$color-action-active: $blue-main;
+$color-action-highlight: $blue-x-light;
+$color-action-modified: $orange-main;
+$color-action-save: $orange-dark;
+$color-action-run: $green-main;
+$color-action-deploy: $blue-main;
+$color-action-lock: $red-main;
+
+$color-param-name: $grey-x-light;
+$color-param-required: $orange-main;
+
+$color-notify-bright: $orange-main;
+
+// Modifier Colors
+$color-darken-deep: rgba($pure-black, 0.8);
+$color-darken-primary: rgba($pure-black, 0.4);
+$color-darken-secondary: rgba($pure-black, 0.2);
+$color-darken-tertiary: rgba($pure-black, 0.1);
+$color-darken-quaternary: rgba($pure-black, 0.05);
+$color-darken-minimal: rgba($pure-black, 0.00625);
+$color-lighten-primary: rgba($white, 0.4);
+$color-lighten-secondary: rgba($white, 0.2);
+$color-lighten-tertiary: rgba($white, 0.1);
+
+$color-transparent-dark: rgba($pure-black, 0);
+$color-transparent-light: rgba($white, 0);
+
+$color-shadow-primary: rgba($grey-xx-dark, 0.2);
+$color-shadow-secondary: rgba($grey-xx-dark, 0.4);
+
+$color-blackout-screen: rgba($grey-xx-dark, 0.9);
+
+// Third-Party Branding Colors
+
+$color-slack-aubergine: rgb(62, 17, 63);
+$color-twitter-blue:  #1DA1F2;
+
+// Base Units
+$base-unit:   8px;
+$half-unit:   $base-unit / 2;
+$size-xx-small: $half-unit;
+$size-x-small: $base-unit;
+$size-small:  $size-x-small * 2;
+$size-medium: $size-small * 2;
+$size-large:  $size-medium * 2;
+$size-x-large:  $size-large * 2;
+
+$size-icon: 24px;
+$size-icon-padding: 6px;
+$size-icon-image: 24px;
+$size-icon-image-padding: 0px;
+
+// Border Radius
+$base-radius: $half-unit;
+$half-radius: $base-radius / 2;
+
+// Sizes
+$size-statusbar-height: $size-medium;
+$size-statusbar-border: 1px;
+$size-statusbar-fullscreen: 100%;
+$size-results: 250px;
+$size-results-screen: $size-results + $size-statusbar-height;
+$size-number-width: 45px;
+$size-editor-width: calc(100% - 45px);
+$size-sidebar-width: 300px;
+
+$size-navbar-height: 48px;
+$size-userbar-width: 240px;
+
+$screen-size-embed-x-large: 888px;
+$screen-size-embed-large: 800px;
+$screen-size-embed-medium: 650px;
+$screen-size-embed-small: 550px;
+$screen-size-embed-tiny: 410px;
+
+$content-width-large: 1200px;
+
+// Colors
+
+$color-bg-button: $color-action-active;
+$color-bg-button-disabled: #ccc;
+$color-bg-new: saturate(darken($color-text-success, 20%), 20%);
+$color-bg-existing: desaturate(darken($color-action-active, 20%), 50%);
+
+// Env Colors
+$env-dev: $purple-main;
+$env-staging: $orange-main;
+$env-prod: $green-main;
+
+// Font Sizes
+// As a point of interest: these are set using the base px value on the body,html elements
+// This allows us to keep a visual proportional hierarchy by only setting one value at each breakpoint.
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 700;
+$font-weight-extrabold: 900;
+
+$font-size-regular: 14px;
+$font-size-base: 16px;
+$font-size-xxx-small: $font-size-base * 0.5;
+$font-size-xx-small: $font-size-base * 0.625;
+$font-size-x-small: $font-size-base * 0.75;
+$font-size-small: $font-size-base;
+$font-size-medium: $font-size-small * 1.25;
+$font-size-large: $font-size-medium * 1.25;
+$font-size-x-large: $font-size-large * 1.28;
+
+$header-sizing:
+  $font-size-x-large,
+  $font-size-large,
+  $font-size-medium,
+  $font-size-small,
+  $font-size-x-small,
+  $font-size-xx-small;
+
+// Font styles
+$font-family-base: 'Roboto', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif, 'Apple Color Emoji';
+
+// Box Shadow
+$base-shadow: 0px ($half-unit / 2) $half-unit rgba($pure-black, 0.1);
+$strong-shadow: 0px $half-unit $size-x-small rgba($pure-black, 0.3);
+
+$states: (
+  'base': $grey-light,
+  'active': $blue-main,
+  'valid': $green-main,
+  'success': $green-main,
+  'error': $red-main,
+  'warning': $orange-main,
+);
+
+$autocode-light-grey: #efefef;
+$autocode-blue: #2c68ff;
+$autocode-blue-dark: #0f4baa;
+$autocode-blue-x-dark: #0a0777;
+
+$font-roboto: 'Roboto', Arial, sans-serif;
+$base-font-size: 18px;
+$base-font-size--mobile: 14px;
+
+$mobile-width: 567px;
+$tablet-width: 768px;
+$personal-width: 1000px;
+
+// Mixins
+@mixin cross-browser($property, $params) {
+  -o-#{$property}: #{$params};
+  -moz-#{$property}: #{$params};
+  -webkit-#{$property}: #{$params};
+  #{$property}: #{$params};
+}
+
+@mixin monospace-font() {
+  font-family: 'Source Code Pro', Monospace1, Monospace2, Monospace3, monospace;
+  font-variant-ligatures: none !important;
+  font-weight: 400;
+}
+
+@mixin main-font() {
+  font-family: 'Roboto',
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Helvetica,
+    Arial,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol";
+  font-variant-ligatures: no-common-ligatures;
+}
+
+@mixin hover-highlight() {
+  color: $color-text-highlight;
+  background-color: $color-bg-highlight;
+}
+
+@mixin cover-image() {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+@mixin contain-image() {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+@mixin col($col:3, $margin:$size-small) {
+  width: calc(100% / #{$col} - #{$margin / $col * ($col - 1)});
+}
+
+@mixin status-box($state: 'base') {
+  $state-color: map-get($states, $state);
+
+  border: 1px solid;
+  background: $white;
+  border-radius: $base-radius;
+
+  @if $state == 'disabled' {
+    border-color: $grey-x-light;
+  } @else if $state == 'bg' {
+    border: 1px solid $color-darken-tertiary;
+    background: $grey-x-light;
+  }
+
+  @if $state-color {
+    border-color: $state-color;
+    box-shadow: $base-shadow;
+  }
+}
+
+@mixin base-link-styles() {
+  a[href], a[href]:link, a[href]:visited, a[href]:active {
+    &:not(.button) {
+      color: $blue-main;
+      text-decoration: none;
+      border-top: 1px solid transparent;
+      border-bottom: 1px solid transparent;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+        color: $blue-dark;
+      }
+    }
+  }
+}
+
+@mixin mobile() {
+  @media screen and (max-width: $mobile-width) {
+    @content;
+  }
+}
+
+@mixin tablet() {
+  @media screen and (max-width: $tablet-width) {
+    @content;
+  }
+}
+
+@mixin personal() {
+  @media screen and (max-width: $personal-width) {
+    @content;
+  }
+}
+
+@mixin above-tablet() {
+  @media screen and (min-width: $tablet-width + 1) {
+    @content;
+  }
+}
+
+@mixin above-mobile() {
+  @media screen and (min-width: $mobile-width + 1) {
+    @content;
+  }
+}
+
+@mixin above-personal() {
+  @media screen and (min-width: $personal-width + 1) {
+    @content;
+  }
+}
+
+@mixin desktop() {
+  @media screen and (min-width: $mobile-width + 1) {
+    @content;
+  }
+}
+
+// Functions
+@function highlight($color) {
+  @return saturate($color, 20%);
+}
+
+@function tint($color, $percentage) {
+  @return mix(white, $color, $percentage);
+}
+
+@function shade($color, $percentage) {
+  @return mix(black, $color, $percentage);
+}

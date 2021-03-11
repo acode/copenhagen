@@ -1,0 +1,28 @@
+<div>
+  <div class="row">
+    <a name="regex" class="btn" tabIndex="0">{{= regexicon() }}</a>
+    <a name="case" class="btn" tabIndex="0">{{= caseicon() }}</a>
+    <input
+      name="find"
+      type="text"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      placeholder="Find in text...">
+    <div class="pos" data-position>0 / 0</div>
+    <div class="spacer"></div>
+    <a name="prev" class="btn" tabIndex="0">{{= feather.icons['chevron-up'].toSvg() }}</a>
+    <a name="next" class="btn" tabIndex="0">{{= feather.icons['chevron-down'].toSvg() }}</a>
+    <a name="close" class="btn" tabIndex="0">{{= feather.icons['x'].toSvg() }}</a>
+  </div>
+  <div class="row">
+    <a class="btn" disabled><svg></svg></a>
+    <a class="btn" disabled><svg></svg></a>
+    <input
+      name="replace"
+      type="text"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      placeholder="Replace with...">
+    <a name="replace-one" class="btn" tabIndex="0"><span>Replace</span></a>
+    <a name="replace-all" class="btn" tabIndex="0"><span>Replace All</span></a>
+    <div class="spacer"></div>
+  </div>
+</div>

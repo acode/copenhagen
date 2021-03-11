@@ -1,0 +1,525 @@
+$editor-caret-color: saturate(lighten($blue-main, 10%), 100%);
+$editor-font-size: $font-size-x-small;
+$editor-line-height: ceil($editor-font-size * 1.5);
+$editor-padding: $size-x-small - 1px;
+$editor-gutter-width: $size-medium * (3 / 2);
+$editor-scrollbar-width: $size-x-small;
+$editor-scrollbar-width-active: $size-x-small * 2;
+
+[control="CPHEditor"] {
+
+  @keyframes ce-animate-no {
+    0%   { transform: translateX(0px); }
+    25%  { transform: translateX(-5px); }
+    50% { transform: translateX(0px); }
+    75% { transform: translateX(5px); }
+    100%   { transform: translateX(0px); }
+  }
+  @keyframes ce-caret-animation {
+    0%   { border-color: $editor-caret-color; }
+    50%  { border-color: $editor-caret-color; }
+    51%  { border-color: transparent; }
+    100% { border-color: transparent; }
+  }
+
+  &.animate-no {
+    animation: ce-animate-no 0.1s linear infinite;
+  }
+
+  &.focus:not(.readonly) {
+    border-color: $blue-main;
+  }
+
+  &:not(.focus), &.disabled {
+    .editor .line-numbers .number.selected:not(.error) {
+      background-color: transparent;
+    }
+    .editor .edit-text div.render div.line div.selection {
+      span.border {
+        margin: 0px -1px;
+        padding: 0px 1px;
+        border-radius: $base-radius;
+        .focus, &:before, &:after, &.length-0 {
+          display: none;
+        }
+      }
+    }
+    .editor .edit-text div.render div.line div.line-selection {
+      &.highlight:not(.error) {
+        background-color: transparent;
+      }
+    }
+  }
+
+  &.disabled {
+    * {
+      user-select: none;
+      pointer-events: none;
+    }
+    .editor .line-numbers {
+      background-color: $grey-xx-light;
+    }
+    .editor {
+      background-color: $grey-xx-light;
+      filter: grayscale(50%);
+    }
+  }
+
+  &.readonly {
+    .read-only {
+      display: flex;
+    }
+  }
+
+  &.nolines {
+    .editor {
+      .line-container {
+        display: none;
+      }
+    }
+  }
+
+  .read-only {
+    pointer-events: none;
+    @include monospace-font();
+    display: none;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    margin: $editor-padding;
+    margin-right: $editor-padding + $editor-scrollbar-width-active;
+    font-size: $editor-font-size;
+    line-height: 1em;
+    padding: $half-unit;
+    z-index: 1;
+    background-color: $grey-dark;
+    border-radius: $base-radius;
+    color: $white;
+    [data-language] {
+      display: none;
+    }
+  }
+
+  font-size: $editor-font-size;
+  position: relative;
+  border-radius: $base-radius;
+  border: 1px solid $color-darken-secondary;
+  border-radius: $base-radius;
+  box-shadow: $base-shadow;
+  flex-grow: 1;
+  display: block;
+
+  &[data-maximized] {
+    position: absolute;
+    margin: 0px;
+    width: 100%;
+    height: 100%;
+    border-radius: 0px;
+    border: none;
+    box-shadow: none;
+    .editor {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 0px;
+    }
+  }
+
+  &.is-mobile {
+    .editor {
+      textarea {
+        caret-color: $editor-caret-color !important;
+        opacity: 1;
+      }
+    }
+  }
+
+  .editor {
+    overflow: hidden;
+    transform: translate3d(0px, 0px, 0px);
+    display: flex;
+    position: relative;
+    background-color: $white;
+    border-radius: $base-radius;
+    &[data-debug] {
+      textarea {
+        opacity: 1;
+        color: transparentize($red-main, 0.5);
+        caret-color: $red-main;
+        &::selection {
+          background-color: transparentize($red-light, 0.5);
+        }
+      }
+    }
+    .line-container {
+      border-top-left-radius: $base-radius;
+      border-bottom-left-radius: $base-radius;
+      position: relative;
+      width: $editor-gutter-width;
+      flex-shrink: 0;
+      flex-grow: 0;
+      overflow: hidden;
+      &.scrolled-x {
+        box-shadow: 4px 0px 8px $color-darken-tertiary;
+      }
+      .line-numbers {
+        position: absolute;
+        left: 0px;
+        z-index: 20;
+        flex-shrink: 0;
+        width: 100%;
+        height: calc(100% + #{$editor-line-height});
+        font-size: $editor-font-size;
+        transform: translate3d(0px, 0px, 0px);
+        @include monospace-font();
+        div.number {
+          position: absolute;
+          display: block;
+          padding-right: $size-small;
+          width: 100%;
+          text-align: right;
+          color: $grey-light;
+          margin-top: $editor-padding;
+          transform: translate3d(0px, 0px, 0px);
+          height: $editor-line-height;
+          line-height: $editor-line-height;
+          &.selected {
+            color: $grey-dark;
+          }
+          &.error {
+            color: $red-main;
+          }
+        }
+      }
+    }
+    .edit-text {
+      flex-grow: 1;
+      overflow: hidden;
+      transform: translate3d(0px, 0px, 0px);
+      display: inline-flex;
+      position: relative;
+      .scrollbar {
+        position: absolute;
+        z-index: 10;
+        &.vertical {
+          top: 1px;
+          bottom: 1px;
+          right: 0px;
+          overflow: visible;
+          .scroller {
+            margin-right: 1px;
+            width: $editor-scrollbar-width-active;
+            top: 0px;
+            right: 0px;
+            height: 0px;
+            &:before {
+              top: 0px;
+              height: 100%;
+              width: $editor-scrollbar-width;
+              transition: width 0.1s ease-in-out;
+            }
+            &:hover {
+              &:before {
+                width: $editor-scrollbar-width-active;
+              }
+            }
+            &.manual {
+              transition: height 0.1s ease-in-out,
+                background-color 0.1s ease-in-out,
+                opacity 0.2s ease-in-out;
+              &:before {
+                width: $editor-scrollbar-width-active;
+              }
+            }
+          }
+        }
+        &.horizontal {
+          bottom: 0px;
+          left: 1px;
+          right: 1px;
+          overflow: visible;
+          .scroller {
+            margin-bottom: 1px;
+            width: 0px;
+            bottom: 0px;
+            left: 0px;
+            height: $editor-scrollbar-width-active;
+            &:before {
+              bottom: 0px;
+              width: 100%;
+              height: $editor-scrollbar-width;
+              transition: height 0.1s ease-in-out;
+            }
+            &:hover {
+              &:before {
+                height: $editor-scrollbar-width-active;
+              }
+            }
+            &.manual {
+              transition: width 0.1s ease-in-out,
+                background-color 0.1s ease-in-out,
+                opacity 0.2s ease-in-out;
+              &:before {
+                height: $editor-scrollbar-width-active;
+              }
+            }
+          }
+        }
+        .scroller {
+          transform: scaleX(0);
+          position: absolute;
+          opacity: 0;
+          user-select: none;
+          pointer-events: none;
+          transform: translate3d(0px, 0px, 0px);
+          transition: height 0.1s ease-in-out,
+            width 0.1s ease-in-out,
+            background-color 0.1s ease-in-out,
+            opacity 0.2s ease-in-out;
+          &:before {
+            content: '';
+            position: absolute;
+            display: block;
+            right: 0px;
+            background-color: $color-darken-primary;
+            border-radius: 1000px;
+          }
+          &.scrolling {
+            opacity: 1;
+            pointer-events: all;
+          }
+          &.manual {
+            pointer-events: all;
+          }
+        }
+      }
+    }
+    textarea {
+      padding: $editor-padding;
+      z-index: 1;
+      overflow: auto;
+      position: absolute;
+      width: calc(100% - #{$editor-padding});
+      height: 100%;
+      overflow: auto;
+      overscroll-behavior-x: contain;
+      opacity: 0.01;
+      color: transparent;
+      caret-color: transparent; // $red-main;
+      &::selection {
+        background-color: transparent; // $red-light;
+      }
+    }
+    div.render {
+      overflow: visible;
+      display: inline-block;
+      position: relative;
+      z-index: 0;
+      padding: $editor-padding 0px;
+      // animation: transform 0.01s linear;
+      &.blink {
+        div.line {
+          div.selection {
+            span.border {
+              &.lb:before,
+              &.rb:after {
+                animation: ce-caret-animation 1s linear infinite;
+              }
+            }
+          }
+        }
+      }
+      &.sample {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        opacity: 0;
+      }
+      &.limit {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        height: 100%;
+        border-right: 1px dashed $color-darken-tertiary;
+        & > .fill {
+          padding-left: $editor-padding;
+          display: inline-block;
+          position: relative;
+          white-space: pre;
+          opacity: 0;
+        }
+      }
+      div.line {
+        width: 10000px;
+        margin-top: $editor-padding;
+        transform: translate3d(0px, 0px, 0px);
+        position: absolute;
+        height: $editor-line-height;
+        overflow: visible;
+        & > .fill {
+          padding: 0px $editor-padding;
+          display: inline-block;
+          position: relative;
+          height: 100%;
+          white-space: pre;
+        }
+        & > div {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          overflow: visible;
+          white-space: pre;
+        }
+        div.display {
+          padding: 0px $editor-padding;
+          z-index: 5;
+          span.whitespace {
+            color: $grey-light;
+          }
+          span.suggestion {
+            color: $color-darken-secondary;
+          }
+        }
+        div.complement {
+          padding: 0px $editor-padding;
+          color: transparent;
+          z-index: 4;
+          span.underline {
+            transform: translateY(-1px);
+            display: inline-block;
+            border-bottom: 1px solid $blue-main;
+            &.no-match {
+              border-bottom-color: $red-main;
+            }
+          }
+        }
+        div.line-error {
+          padding: 0px $editor-padding;
+          color: transparent;
+          z-index: 3;
+          span.underline {
+            opacity: 0.5;
+            display: inline-block;
+            background-color: $red-light;
+          }
+        }
+        div.selection {
+          padding: 0px $editor-padding;
+          z-index: 2;
+          color: transparent;
+          span.spacer, span.border {
+            display: inline-block;
+            position: relative;
+            height: 100%;
+            vertical-align: text-bottom;
+          }
+          span.border {
+            background-color: darken($blue-x-light, 5%);
+            &.lb:before,
+            &.rb:after {
+              display: block;
+              position: absolute;
+              content: '';
+              top: 0px;
+              height: 100%;
+              width: 0px;
+              border-left: 2px solid $editor-caret-color;
+            }
+            &.lb:before {
+              left: -1px;
+            }
+            &.rb:after {
+              right: -1px;
+            }
+            &:not(.lb.rb):empty {
+              width: 2px;
+            }
+            .focus {
+              display: block;
+              position: absolute;
+              top: -2px;
+              left: -2px;
+              border: 2px solid transparent;
+              border-left-color: $blue-main;
+              border-top-color: $blue-main;
+              transform: rotate(225deg);
+            }
+            &.rtl {
+              &:not(.lb) {
+                .focus {
+                  display: none;
+                }
+              }
+            }
+            &.ltr {
+              &:not(.rb) {
+                .focus {
+                  display: none;
+                }
+              }
+              .focus {
+                left: auto;
+                right: -2px;
+              }
+            }
+          }
+        }
+        div.find {
+          position: absolute;
+          top: 0px;
+          left: 0px;
+          padding: 0px $editor-padding;
+          color: transparent;
+          z-index: 1;
+          span.found {
+            display: inline-block;
+            position: relative;
+            &:before {
+              display: block;
+              position: absolute;
+              content: '';
+              top: 0px;
+              left: 0px;
+              bottom: 0px;
+              right: 0px;
+              border-radius: $base-radius;
+              background-color: $orange-x-light;
+              border: 2px solid $orange-main;
+              margin: 0px -1px;
+            }
+          }
+        }
+        div.line-selection {
+          padding: 0px $editor-padding;
+          z-index: 0;
+          color: transparent;
+          &.highlight {
+            background-color: lighten($blue-x-light, 1%);
+          }
+          &.error {
+            background-color: $red-x-light;
+          }
+        }
+      }
+    }
+    textarea,
+    div.render {
+      transform: translate3d(0px, 0px, 0px);
+      @include monospace-font();
+      white-space: pre !important;
+      font-size: $editor-font-size;
+      line-height: $editor-line-height;
+      background-color: transparent;
+      outline: none;
+      border: none;
+      resize: none;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      -moz-tab-size: 2 !important;
+      -o-tab-size: 2 !important;
+      tab-size: 2 !important;
+      &::-webkit-scrollbar { display: none; }
+    }
+  }
+
+}

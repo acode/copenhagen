@@ -1,0 +1,339 @@
+<html>
+  <head>
+    <title>Copenhagen Editor</title>
+    <!-- Copenhagen Editor -->
+    <link rel="stylesheet" href="./compiled/copenhagen.min.css">
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <script src="./compiled/copenhagen.min.js"></script>
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="./style.css"></script>
+    <script src="./main.js"></script>
+  </head>
+  <body>
+    <div class="contents">
+      <h1>🇩🇰 Copenhagen Editor</h1>
+      <p>
+        <strong>Copenhagen</strong> is a free, lightweight and extensible
+        open source code editor for the web. It's responsible for powering
+        <a href="https://autocode.com">Autocode</a>. You can start playing with
+        it yourself directly by following the installation instructions:
+        <br><br>
+        <a href="">View the repository on GitHub</a> or
+        <a href="">fork this in Autocode</a>.
+      </p>
+      <div class="editor" data-language="javascript" data-maxrows="20">
+        // Welcome to the Copenhagen Editor!
+        // Try typing some JavaScript - there's even built-in typeahead!
+
+        function CodeCompleter () {
+          this.suggestions = this.generateSuggestions(this.suggestionMap);
+        };
+
+        CodeCompleter.prototype.cursorCharacter = '·';
+        CodeCompleter.prototype.wildcardWordCharacter = '¤';
+        CodeCompleter.prototype.wildcardPhraseCharacter = '…';
+        CodeCompleter.prototype.wildcardReplaceCharacter = '\\$1';
+
+        CodeCompleter.prototype.suggestionMap = {
+          'javascript': [
+            'const ',
+            'const ¤ = ',
+            'const {…} = ',
+            'const […] = ',
+            'console.log(`·Got here: A·`);',
+            'console.error(`·Error·`);',
+            'let ',
+            'let ¤ = ',
+            'let {…} = ',
+            'let […] = ',
+            'var ',
+            'var ¤ = ',
+            'var {…} = ',
+            'var […] = ',
+            'lib.',
+            'module.exports = ',
+            'module.exports = async ',
+            'return ',
+            'require(\'·\')',
+            'class ',
+            'class ¤ {·}',
+            'function ',
+            'function (·)',
+            'function ¤ (·)',
+            'function () {·}',
+            'function ¤ () {·}',
+            'function (…) {·}',
+            'function ¤ (…) {·}',
+            'if (·true·)',
+            'if () {·}',
+            'if (…) {·}',
+            'else ',
+            'else {·}',
+            'else if (·true·)',
+            'for (let i = 0; i < ·10·; i++)',
+            'for () {·}',
+            'for (…) {·}',
+            'while (·true·)',
+            'while () {·}',
+            'while (…) {·}',
+            'await ',
+            'await lib.',
+            'await new Promise((resolve, reject) => {·});',
+            'async ',
+            'async (·)',
+            '() => {·}',
+            '(…) => {·}',
+            '/**\n * ·\n */',
+            '* @param {·}',
+            '* @param {…} ·paramName·',
+            '* @returns {·}',
+            '* @returns {…} ·returnValue·',
+            'true',
+            'false',
+            'null',
+            'new ',
+            'new Promise((resolve, reject) => {·});',
+            'Promise((resolve, reject) => {·});',
+            'Promise.all([·]);',
+            'setTimeout(() => {·}, 1);',
+            'setInterval(() => {·}, 1);',
+            'try {·}',
+            'catch (e) {·}',
+            'catch (…) {·}',
+            'throw ',
+            'throw new Error(`·Oops!·`);',
+            'new Error(`·Oops!·`)',
+            'Error(`·Oops!·`)',
+            'Error(…)'
+          ]
+        };
+
+        CodeCompleter.prototype.generateSuggestions = function () {
+          var suggestionMap = this.suggestionMap;
+          var cursorCharacter = this.cursorCharacter;
+          return Object.keys(suggestionMap).reduce(function (suggestions, language) {
+            var phraseList = suggestionMap[language].map(function (value) {
+              var cursorStart = value.indexOf(cursorCharacter);
+              var cursorEnd = value.lastIndexOf(cursorCharacter);
+              var cursorLength = 0;
+              if (cursorStart !== cursorEnd) {
+                cursorLength = cursorEnd - cursorStart - 1;
+                value = value.slice(0, cursorEnd) + value.slice(cursorEnd + 1);
+              }
+              var adjust = cursorStart === -1
+                ? 0
+                : cursorStart - value.length + 1;
+              if (adjust) {
+                value = value.substr(0, value.length + adjust - 1) + value.substr(value.length + adjust);
+              }
+              return {
+                value: value,
+                adjust: adjust,
+                cursorLength: cursorLength
+              };
+            }.bind(this));
+            suggestions[language] = {
+              lookup: this.generateLookupTrie(phraseList),
+            };
+            return suggestions;
+          }.bind(this), {});
+        };
+
+        CodeCompleter.prototype.generateLookupTrie = function (phraseList) {
+          var wildcardWord = this.wildcardWordCharacter;
+          var wildcardPhrase = this.wildcardPhraseCharacter;
+          var root = {};
+          var curNode, node, phrase, value;
+          var i, j, k;
+          for (i = 0; i < phraseList.length; i++) {
+            phrase = phraseList[i];
+            value = phrase.value;
+            for (j = value.length - 1; j >= 0; j--) {
+              curNode = root;
+              for (k = j; k >= 0; k--) {
+                char = value[k];
+                curNode[char] = curNode[char] || {};
+                if (char === wildcardWord || char === wildcardPhrase) {
+                  curNode[char][char] = curNode[char][char] || curNode[char];
+                }
+                curNode = curNode[char];
+              }
+              curNode.phrases = curNode.phrases || [];
+              curNode.phrases.push({
+                value: value,
+                ranking: i,
+                adjust: phrase.adjust,
+                cursorLength: phrase.cursorLength,
+                re: phrase.re
+              });
+            }
+          }
+          return root;
+        };
+
+        CodeCompleter.prototype.complete = function (tree, value, index, subs, inWildcard) {
+          index = index || 0;
+          subs = subs || [];
+          inWildcard = inWildcard || '';
+          var wildcardWord = this.wildcardWordCharacter;
+          var wildcardPhrase = this.wildcardPhraseCharacter;
+          var wildcardReplace = this.wildcardReplaceCharacter;
+          var char;
+          var results = [];
+          var node = tree;
+          for (var i = value.length - 1; i >= 0; i--) {
+            index++;
+            var char = value[i];
+            if (node[wildcardWord]) {
+              if (char.match(/[0-9a-z_$]/i)) {
+                var newSubs = subs.slice();
+                if (inWildcard) {
+                  newSubs[0] = char + newSubs[0];
+                } else {
+                  newSubs.unshift(char);
+                }
+                results = results.concat(
+                  this.complete(node[wildcardWord], value.substr(0, i), index - 1, newSubs, wildcardWord)
+                );
+              }
+            }
+            if (node[wildcardPhrase]) {
+              if (char.match(/[^\(\)\[\]\{\}\"\'\`]/i)) {
+                var newSubs = subs.slice();
+                if (inWildcard) {
+                  newSubs[0] = char + newSubs[0];
+                } else {
+                  newSubs.unshift(char);
+                }
+                results = results.concat(
+                  this.complete(node[wildcardPhrase], value.substr(0, i), index - 1, newSubs, wildcardPhrase)
+                );
+              }
+            }
+            if (node[char]) {
+              inWildcard = '';
+              if (node.phrases && (char === ' ')) {
+                results = results.concat(
+                  node.phrases.map(function (p) {
+                    var curSubs = subs.slice();
+                    return {
+                      value: p.value.replace(
+                        new RegExp('(' + [wildcardWord, wildcardPhrase, wildcardReplace].join('|') + ')', 'gi'),
+                        function ($0) { return curSubs.shift() || ''; }
+                      ),
+                      ranking: p.ranking,
+                      adjust: p.adjust,
+                      offset: index - 1 + subs.join('').length,
+                      cursorLength: p.cursorLength
+                    };
+                  })
+                );
+              }
+              node = node[char];
+            } else {
+              break;
+            }
+          }
+          if (node.phrases && (i < 0 || value[i] === ' ')) {
+            (i < 0) && index++;
+            results = results.concat(
+              node.phrases.map(function (p) {
+                var curSubs = subs.slice();
+                return {
+                  value: p.value.replace(
+                    new RegExp('(' + [wildcardWord, wildcardPhrase, wildcardReplace].join('|') + ')', 'gi'),
+                    function ($0) { return curSubs.shift() || ''; }
+                  ),
+                  ranking: p.ranking,
+                  adjust: p.adjust,
+                  offset: index - 1 + subs.join('').length,
+                  cursorLength: p.cursorLength
+                };
+              })
+            );
+          }
+          return results
+            .sort(function (p1, p2) { return p2.offset - p1.offset || p1.ranking - p2.ranking; })
+            .filter(function (p) { return p.offset < p.value.length; });
+        };
+
+        CodeCompleter.prototype.suggest = function (line, language, endOffset) {
+          endOffset = parseInt(endOffset) || 0;
+          var suggestions = this.suggestions[language];
+          if (!suggestions) {
+            return;
+          }
+          line = line.substring(0, line.length).replace(/^\s+/, '');
+          var phrases = this.complete(suggestions.lookup, line);
+          if (!phrases.length) {
+            return;
+          }
+          var suggest = phrases[0];
+          return  {
+            value: suggest.value.substr(suggest.offset + endOffset),
+            adjust: suggest.adjust,
+            cursorLength: suggest.cursorLength
+          };
+        };
+      </div>
+      <h2>Features</h2>
+      <p>
+        <ul>
+          <li>A simple, intuitive API</li>
+          <li>Extensible code completion via typeahead</li>
+          <li>Configurable hotkeys</li>
+          <li>Multi-cursor selection</li>
+          <li>Find and replace</li>
+          <li>Support for large files (currently up to 100kloc)</li>
+          <li>Configurable language settings and highlighting</li>
+          <li>Small package size (50kB minified)</li>
+          <li>Autogrow mode (default) or maximized view</li>
+          <li>Custom autocomplete dropdown support (beta)</li>
+          <li>Mobile support (beta)</li>
+        </ul>
+      </p>
+      <h2>Mission</h2>
+      <p>
+        The mission of Copenhagen is to be <strong>the web's most intuitive code-editing component</strong>.
+        We need it to be easy to play with &mdash; we're working very
+        hard to deliver the world's best web-native development experience inside
+        of <a href="https://autocode.com">Autocode</a>.
+        Developers and non-developers alike spend hours writing code inside of
+        our product every day, Copenhagen gives us complete control to
+        <strong>(1) innovate quickly</strong> while we <strong>(2) maintain a code-writing experience
+        as close as possible to the world's best native IDEs</strong>.
+      </p>
+      <h2>Why should I use Copenhagen?</h2>
+      <p>
+        VSCode's editor, <a href="https://microsoft.github.io/monaco-editor/">Monaco</a>,
+        is a great choice for web-based development. However; it's also over 2MB, not explicitly
+        mobile-friendly, and has a pretty verbose API. Copenhagen gets you 95%
+        of the most useful functionality with 2.5% of the code. Admittedly,
+        Monaco currently performs better on gigantic files (>100kloc).
+        When comparing Copenhagen to <a href="https://ace.c9.io/">Ace</a> or
+        <a href="https://codemirror.net/6/">CodeMirror</a> it really comes down to
+        personal preference &mdash; we like our API and editor and we're committed to
+        making sure it stays awesome.
+      </p>
+      <h2>What's with the name?</h2>
+      <p>
+        The first version of Copenhagen was built in a weekend at the
+        <em>Radisson Blu Scandinavia Hotel</em> in Copenhagen, Denmark during early 2018.
+        We <a href="https://www.producthunt.com/posts/code-xyz">launched it as a standalone product</a>
+        that would eventually become Autocode. We didn't name it until February 2021
+        when we decided we wanted to open source it. The name seemed natural, if
+        not a little tongue-in-cheek &mdash;
+        Microsoft's Monaco editor is named after a city with a famous casino,
+        and the hotel we were at is literally attached to <em>Casino Copenhagen</em>.
+      </p>
+      <h2>Development and license</h2>
+      <p>
+        The development of Copenhagen is funded by commercial interests
+        (<a href="https://autocode.com/about/">here is Autocode's team and list of investors</a>),
+        but is fully open source and MIT licensed. We do not profit off of the
+        development of Copenhagen directly; proceeds from our commercial offering
+        help fund its development.
+      </p>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{{~ this.items :item:i }}
+  {{? item === '-' }}
+    <hr>
+  {{??}}
+    <a
+      class="item"
+      data-item-index="{{= i }}"
+      {{? item.href }}href="{{= item.href }}"{{?}}
+      {{? item.target }}target="{{= item.target }}"{{?}}>
+      <span class="title">
+        {{? item.icon }}
+          {{= item.icon.startsWith('<') ? item.icon : feather.icons[(typeof item.icon === 'function' ? item.icon(this.data) : item.icon) || 'chevron-right'].toSvg() }}
+        {{??}}
+          <svg class="empty"></svg>
+        {{?}}
+        {{= (typeof item.title === 'function' ? item.title(this.data) : item.title) }}
+      </span>
+      {{? item.shortcut }}
+        <span class="shortcut">
+          {{= this.generateShortcut(typeof item.shortcut === 'function' ? item.shortcut(this.data) : item.shortcut) }}
+        </span>
+      {{?}}
+    </a>
+  {{?}}
+{{~}}

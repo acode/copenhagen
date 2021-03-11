@@ -1,0 +1,110 @@
+control[control="CPHFindReplace"] {
+
+  position: absolute;
+  z-index: 99;
+  top: $half-unit;
+  right: $editor-scrollbar-width-active + $half-unit;
+  padding: $half-unit;
+  background-color: $grey-xx-light;
+  border-radius: $base-radius;
+  box-shadow: $strong-shadow;
+  border: 1px solid $color-darken-secondary;
+  width: 480px;
+
+  div.row {
+    display: flex;
+    align-items: center;
+    &:not(:first-child) {
+      margin-top: $half-unit;
+    }
+    input[type="text"] {
+      width: 200px;
+      font-family: inherit;
+      font-weight: inherit;
+      flex-shrink: 1;
+      color: $grey-xx-dark;
+      font-size: $font-size-x-small;
+      height: $size-medium;
+      display: flex;
+      align-items: center;
+      line-height: 1.5em;
+      border: 1px solid $color-darken-secondary;
+      background-color: $white;
+      outline: none;
+      border-radius: $base-radius;
+      padding: 0px $size-x-small;
+      caret-color: $editor-caret-color;
+      &:not(:first-child) {
+        margin-left: $half-unit;
+      }
+      &::placeholder {
+        color: $color-darken-secondary;
+      }
+      &:focus {
+        border-color: $blue-main;
+      }
+    }
+    div.pos {
+      color: $grey-main;
+      margin-left: $size-x-small;
+      padding: 0px $size-x-small;
+      white-space: nowrap;
+    }
+    div.spacer {
+      flex-grow: 1;
+    }
+    a.btn {
+      flex-shrink: 0;
+      color: $grey-dark;
+      height: $size-medium;
+      padding: 0px ($size-x-small - 1px);
+      border: 1px solid transparent;
+      border-radius: $base-radius;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: $base-shadow;
+      cursor: pointer;
+      user-select: none;
+      outline: none;
+      &:not(:first-child) {
+        margin-left: $half-unit;
+      }
+      & > svg {
+        color: currentColor;
+        width: $size-small;
+        height: $size-small;
+      }
+      & > span {
+        padding: 0px $half-unit;
+      }
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: $strong-shadow;
+        color: $grey-xx-dark;
+        border-color: $color-darken-primary;
+      }
+      &:active {
+        box-shadow: inset $base-shadow;
+        transform: translateY(0px);
+      }
+      &.on {
+        background-color: $blue-main;
+        color: $white;
+        box-shadow: inset $base-shadow;
+        transform: translateY(0px);
+      }
+      &:focus {
+        border: 1px solid $blue-main;
+      }
+      &[disabled] {
+        cursor: default;
+        transform: translateY(0px) !important;
+        border-color: transparent !important;
+        color: $grey-main !important;
+        box-shadow: none;
+      }
+    }
+  }
+
+}

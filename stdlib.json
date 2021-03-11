@@ -1,0 +1,10 @@
+{
+  "name": "autocode/copenhagen",
+  "version": "0.0.0",
+  "timeout": 10000,
+  "build": "functionscript",
+  "local": {
+    "port": 3434,
+    "route": "/"
+  }
+}
