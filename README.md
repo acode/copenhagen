@@ -8,12 +8,11 @@ and it's written entirely in vanilla JavaScript with only
 [feather icons](https://feathericons.com) bundled as
 dependencies.
 
-You can play around with your own installation right away by forking this
+Documentation is available at [copenhagen.autocode.com](https://copenhagen.autocode.com).
+You can also play around with your own installation right away by forking this
 repository in Autocode:
 
 [<img src="https://open.autocode.com/static/images/open.svg?" width="192">](https://open.autocode.com/)
-
-And documentation is available at [copenhagen.autocode.com](https://copenhagen.autocode.com).
 
 ![Copenhagen Demo](/readme/gallery/01.gif)
 
