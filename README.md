@@ -1,4 +1,4 @@
-# Copenhagen Editor
+# 🇩🇰 Copenhagen Editor
 
 **Copenhagen** is a free, lightweight and hackable
 open source code editor for the web. It's responsible for powering the
