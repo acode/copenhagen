@@ -3,9 +3,9 @@
     <title>Copenhagen Editor</title>
     <!-- Copenhagen Editor -->
     <link rel="stylesheet" href="./compiled/copenhagen.0-1-0.min.css">
-    <link rel="icon" type="image/png" href="./favicon.png">
     <script src="./compiled/copenhagen.0-1-0.min.js"></script>
     <!-- Main Styles -->
+    <link rel="icon" type="image/png" href="./favicon.png">
     <link rel="stylesheet" href="./style.css"></script>
     <script src="./main.js"></script>
   </head>
@@ -13,13 +13,195 @@
     <div class="nav">
       <a href="/">Copenhagen Editor</a>
       |
-      <span>API Documentation</span>
+      <span>Documentation</span>
       |
       <a href="https://github.com/acode/copenhagen/">View on GitHub</a>
       |
       <a href="https://autocode.com/app/autocode/copenhagen/">Install on Autocode</a>
     </div>
     <div class="docs">
+
+      <h1>
+        Getting started
+      </h1>
+
+      <p>
+        To get started with Copenhagen, add <code>copenhagen.0-1-0.min.css</code>
+        and <code>copenhagen.0-1-0.min.js</code> to your web project.
+        You can find them <a href="https://github.com/acode/copenhagen/">on GitHub</a>.
+        Then import them to your webpage by adding the following lines in the
+        <code>&lt;head&gt;</code> tag of your webpage:
+      </p>
+
+      <div class="editor" data-language="html" data-maxrows="20">
+        <!-- Copenhagen Editor -->
+        &lt;link rel="stylesheet" href="./compiled/copenhagen.0-1-0.min.css"&gt;
+        &lt;script src="./compiled/copenhagen.0-1-0.min.js"&gt;&lt;/script&gt;
+      </div>
+
+      <p>
+        You can then instantiate a new Editor adding the following JavaScript
+        within a <code>&lt;script&gt;</code> tag:
+      </p>
+
+      <div class="editor" data-language="javascript" data-maxrows="20">
+        // Use DOMContentLoaded or whatever instantiation code you'd like,
+        // just make sure the page is ready...
+        window.addEventListener('DOMContentLoaded', function () {
+
+          // instantiated CPHEditor instance with config
+          var editor = new Copenhagen.Editor({language: 'javascript'});
+
+          // open, but do not auto-focus the editor
+          editor.open(this.selector('.some-selector'), false);
+
+          // set a value
+          editor.setValue('var message = `hello world`;');
+
+        });
+      </div>
+
+      <p>
+        Alternatively, you can automatically convert all elements matching a
+        specific selector. This will automatically pass in config values
+        via <code>data-*</code> attributes on the selector.
+      </p>
+
+      <div class="editor" data-language="html" data-maxrows="20">
+        &lt;div class="editor" data-language="html" data-maxrows="20"&gt;
+          // some code
+        &lt;/div&gt;
+      </div>
+
+      <br>
+
+      <div class="editor" data-language="javascript" data-maxrows="20">
+        window.addEventListener('DOMContentLoaded', function () {
+          var editors = Copenhagen.initSelectorAll('.editor');
+        });
+      </div>
+
+      <br><br>
+
+      <h1>
+        Constructor
+      </h1>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="addAutocomplete">Copenhagen.Editor() / CPHEditor()</a>
+        </div>
+        <div class="method-description">
+          Creates a Copenhagen editor instance with a supplied config when using
+          <code>new Copenhagen.editor(cfg)</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">object</span><span class="param-name">cfg</span> Configuration settings
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">string</span><span class="param-name">language</span>
+              Sets the language of the editor. Currently supported languages are
+              <code>"javascript"</code>, <code>"json"</code>, <code>"markdown"</code>,
+              <code>"html"</code>, <code>"css"</code> and <code>"text"</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">boolean</span><span class="param-name">readonly</span>
+              Sets readonly status on the editor. Defaults to <code>false</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">boolean</span><span class="param-name">hidden</span>
+              Hides the editor. Defaults to <code>false</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">boolean</span><span class="param-name">disabled</span>
+              Disables the editor. Defaults to <code>false</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">boolean</span><span class="param-name">maximized</span>
+              Sets whether or not the editor takes up the entirety of the relative parent or not.
+              Defaults to <code>false</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">integer</span><span class="param-name">rows</span>
+              Sets the minimum number of rows of the editor. Defaults to <code>1</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">integer</span><span class="param-name">maxrows</span>
+              Sets the maximum number of rows of the editor. Defaults to <code>30</code>
+              and can not be set above <code>30</code>. Use <code>maximized</code> if
+              you need a larger editor.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">boolean</span><span class="param-name">tabout</span>
+              Sets whether or not you can "tab out" of the editor. If set to true,
+              the tab key will not be usable to insert tabs. Defaults to <code>false</code>.
+          </div>
+          <div class="method-param">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="param-type">boolean</span><span class="param-name">nolines</span>
+              Hides line numbers when enabled. Defaults to <code>false</code>.
+          </div>
+        </div>
+      </div>
+
+      <br><br>
+
+      <h1>
+        Methods
+      </h1>
+
+      <div class="methods-list">
+        <a href="#addAutocomplete">CPHEditor#addAutocomplete</a>
+        <a href="#addHotkey">CPHEditor#addHotkey</a>
+        <a href="#animateNo">CPHEditor#animateNo</a>
+        <a href="#blur">CPHEditor#blur</a>
+        <a href="#canSuggest">CPHEditor#canSuggest</a>
+        <a href="#clearHistory">CPHEditor#clearHistory</a>
+        <a href="#clearMetadata">CPHEditor#clearMetadata</a>
+        <a href="#disable">CPHEditor#disable</a>
+        <a href="#enable">CPHEditor#enable</a>
+        <a href="#find">CPHEditor#find</a>
+        <a href="#findComplements">CPHEditor#findComplements</a>
+        <a href="#focus">CPHEditor#focus</a>
+        <a href="#getActiveFormatter">CPHEditor#getActiveFormatter</a>
+        <a href="#getActiveLanguage">CPHEditor#getActiveLanguage</a>
+        <a href="#getActiveLanguageDictionary">CPHEditor#getActiveLanguageDictionary</a>
+        <a href="#getFormatter">CPHEditor#getFormatter</a>
+        <a href="#getMetadata">CPHEditor#getMetadata</a>
+        <a href="#getValue">CPHEditor#getValue</a>
+        <a href="#gotoHistory">CPHEditor#gotoHistory</a>
+        <a href="#hasFocus">CPHEditor#hasFocus</a>
+        <a href="#hide">CPHEditor#hide</a>
+        <a href="#inComment">CPHEditor#inComment</a>
+        <a href="#inString">CPHEditor#inString</a>
+        <a href="#isReadOnly">CPHEditor#isReadOnly</a>
+        <a href="#open">CPHEditor#open</a>
+        <a href="#removeAutocomplete">CPHEditor#removeAutocomplete</a>
+        <a href="#removeHotkey">CPHEditor#removeHotkey</a>
+        <a href="#render">CPHEditor#render</a>
+        <a href="#save">CPHEditor#save</a>
+        <a href="#scrollPage">CPHEditor#scrollPage</a>
+        <a href="#scrollToText">CPHEditor#scrollToText</a>
+        <a href="#scrollToLine">CPHEditor#scrollToLine</a>
+        <a href="#scrollTo">CPHEditor#scrollTo</a>
+        <a href="#select">CPHEditor#select</a>
+        <a href="#setError">CPHEditor#setError</a>
+        <a href="#setFormatter">CPHEditor#setFormatter</a>
+        <a href="#setLanguage">CPHEditor#setLanguage</a>
+        <a href="#setMaximized">CPHEditor#setMaximized</a>
+        <a href="#setMetadata">CPHEditor#setMetadata</a>
+        <a href="#setReadOnly">CPHEditor#setReadOnly</a>
+        <a href="#setValue">CPHEditor#setValue</a>
+        <a href="#show">CPHEditor#show</a>
+        <a href="#userAction">CPHEditor#userAction</a>
+      </div>
 
 
       <div class="method">

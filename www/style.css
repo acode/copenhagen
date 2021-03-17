@@ -83,12 +83,23 @@ body .docs {
   margin-top: 48px;
 }
 
-body .docs .method {
-  border-bottom: 1px solid #d0d0d0;
-  padding: 32px 0px;
+body .docs .methods-list {
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding-bottom: 64px;
 }
 
-body .docs .method .method-name {
+body .docs .method {
+  margin-top: -1px;
+  border-top: 1px solid #d0d0d0;
+  border-bottom: 1px solid #d0d0d0;
+  padding-bottom: 64px;
+}
+
+body .docs .method .method-name a {
+  display: inline-block;
+  padding-top: 64px;
   font-size: 20px;
   font-weight: 700;
   color: #202020;

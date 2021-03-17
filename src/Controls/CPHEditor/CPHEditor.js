@@ -2614,7 +2614,10 @@ CPHEditor.prototype.open = function (el, focus, replaceText) {
     el.innerHTML = '';
     var lines = text.split('\n');
     if (!lines[0].trim()) {
-      lines = lines.slice(1);
+      lines.shift();
+    }
+    if (!lines[lines.length - 1].trim()) {
+      lines.pop();
     }
     this.userAction('InsertText', lines.join('\n'));
     this.clearHistory();
