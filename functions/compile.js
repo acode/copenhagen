@@ -1,7 +1,5 @@
 const VERSION = '0.1.0';
 
-const lib = require('lib')({token: process.env.STDLIB_GENERAL_TOKEN});
-
 const fs = require('fs');
 const path = require('path');
 
