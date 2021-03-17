@@ -1,10 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
 body {
-  font-family: Arial;
+  font-family: 'Inter', Arial;
   line-height: 1.5em;
+  color: #404040;
+  font-weight: 400;
+  font-size: 16px;
+}
+
+body .nav {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  border-bottom: 1px solid #d0d0d0;
+  background-color: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #909090;
+}
+
+body .nav span {
+  color: #202020;
+  display: inline-block;
+  padding: 0px 32px;
+}
+
+body .nav a {
+  display: inline-block;
+  padding: 0px 32px;
 }
 
 body .contents {
   max-width: 800px;
   padding: 16px;
   margin: 0px auto;
+  margin-top: 48px;
+}
+
+h1, h2, h3, h4, h5 {
+  font-weight: 600;
+  color: #101010;
+}
+
+strong {
+  font-weight: 600;
+  color: #202020;
+}
+
+code {
+  background-color: #f0f0f0;
+  display: inline-block;
+  border-radius: 3px;
+  font-size: 1em;
+  line-height: 1.4em;
+  padding: 0em 0.4em;
+  margin: 0em 0.2em;
+  font-weight: 700;
+}
+
+a:link, a:visited, a:active {
+  color: #36f;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }

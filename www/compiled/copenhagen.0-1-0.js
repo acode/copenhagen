@@ -5,7 +5,6 @@ window['Copenhagen'] = {
     return [].slice.call(document.querySelectorAll(selector)).map(function (el) {
       var language = el.getAttribute('data-language');
       var attrs = [].slice.call(el.attributes);
-      console.log(attrs);
       var cfg = attrs
         .filter(function (a) { return a.nodeName.startsWith('data-'); })
         .reduce(function (cfg, a) {
@@ -581,8 +580,8 @@ function CPHEditor (app, cfg) {
   this.app = app;
   this.debug = cfg.hasOwnProperty('debug') && cfg.debug !== false;
   this.maximized = cfg.hasOwnProperty('maximized') && cfg.maximized !== false;
-  this.rows = Math.max(1, Math.min(parseInt(cfg.rows) || 1, 50));
-  this.maxrows = Math.max(1, Math.min(parseInt(cfg.maxrows || cfg.rows) || 50, 50));
+  this.rows = Math.max(1, Math.min(parseInt(cfg.rows) || 1, 30));
+  this.maxrows = Math.max(1, Math.min(parseInt(cfg.maxrows || cfg.rows) || 30, 30));
   this.tabout = cfg.hasOwnProperty('tabout') && cfg.tabout !== false;
   this.nolines = cfg.hasOwnProperty('nolines') && cfg.nolines !== false;
 
@@ -1707,6 +1706,12 @@ CPHEditor.prototype.setValue = function (value) {
 CPHEditor.prototype.save = function () {
   this.setValue(this.value);
   this.dispatch('save', this, this.value);
+};
+
+CPHEditor.prototype.clearHistory = function (amount) {
+  this._history.userActions = [];
+  this._history.initialValue = this.value;
+  this._historyIndex = -1;
 };
 
 CPHEditor.prototype.gotoHistory = function (amount) {
@@ -2962,6 +2967,21 @@ CPHEditor.prototype.removeHotkey = function (key) {
   return true;
 };
 
+CPHEditor.prototype.open = function (el, focus, replaceText) {
+  if (replaceText) {
+    var text = el.innerHTML;
+    text = text.replace(/&gt;/gi, '>').replace(/&lt;/gi, '<').replace(/&amp;/gi, '&');
+    el.innerHTML = '';
+    var lines = text.split('\n');
+    if (!lines[0].trim()) {
+      lines = lines.slice(1);
+    }
+    this.userAction('InsertText', lines.join('\n'));
+    this.clearHistory();
+  }
+  Control.prototype.open.call(this, el, focus);
+};
+
 function CPHContextMenu (app, cfg) {
 
   this.app = app;
@@ -3292,9 +3312,13 @@ CPHCursor.prototype.calculateInsertText = function (value, args, lang) {
       };
     });
     // Get minimum tab count
-    var minCount = Math.min.apply(Math, lines.slice(1).map(function (l) {
-      return Math.floor(l.count / lang.tabWidth) * lang.tabWidth;
-    }));
+    var minCount = Math.min.apply(
+      Math,
+      lines
+        .slice(1)
+        .filter(function (l) { return l.line.length > 0; })
+        .map(function (l) { return Math.floor(l.count / lang.tabWidth) * lang.tabWidth; })
+    );
     insertValue = lines.map(function (l, i) {
       if (!i) {
         return ' '.repeat(l.count % lang.tabWidth) + l.line;

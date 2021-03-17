@@ -1,15 +1,24 @@
 <html>
   <head>
-    <title>Copenhagen</title>
+    <title>CPH Playground: Min</title>
     <link rel="stylesheet" href="../../compile/?filename=style.css&min=t">
     <script src="../../compile/?filename=script.js&min=t"></script>
     <script src="../../main.js"></script>
   </head>
   <body>
-    <div class="editor">
-      // Here's
-      // Some
-      // Code
+    <div class="editor" data-language="javascript">
+      // This page uses the minified Copenhagen source compiled from
+      // the `src` directory. It will take longer to load than the raw editor,
+      // as it performs minification on-the-fly.
+
+      // If you're modifying the internals of Copenhagen,
+      // you can modify them in `src` and play with the result here.
+
+      // We recommend using Autocode command line tools for local development,
+      // located at: https://github.com/stdlib/lib
+
+      // Once configured, you can run `lib http` and access this page at:
+      // http://localhost:3434/dev/raw/
     </div>
   </body>
 </html>

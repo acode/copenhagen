@@ -1,3 +1,5 @@
+const VERSION = '0.1.0';
+
 const lib = require('lib')({token: process.env.STDLIB_GENERAL_TOKEN});
 
 const fs = require('fs');
@@ -143,8 +145,8 @@ module.exports = async (filename, min = false, write = false, context) => {
     if (write) {
       let ext = filename.split('.').pop();
       let writename = min
-        ? ['copenhagen', 'min', ext].join('.')
-        : ['copenhagen', ext].join('.');
+        ? ['copenhagen', VERSION.replace(/\./gi, '-'), 'min', ext].join('.')
+        : ['copenhagen', VERSION.replace(/\./gi, '-'), ext].join('.');
       fs.writeFileSync(path.join('./www/compiled/', writename), response.body);
     }
     return response;
