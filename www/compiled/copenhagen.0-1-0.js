@@ -1488,8 +1488,14 @@ CPHEditor.prototype.eventListeners = {
           preventDefaultAndStopPropagation();
           this.user.moveCursorsByLine(this.value, 'left');
           this.scrollToText();
-        } else if (key === 'contextmenu') {
-          // do nothing, windows context menu
+        } else if (
+          key === 'contextmenu' ||
+          key === 'altgraph' ||
+          key === 'os'
+        ) {
+          // Do nothing: allow native behavior
+          //  Windows ContextMenu key,
+          //  AltGraphic key and OS key
         } else {
           preventDefaultAndStopPropagation();
           if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {

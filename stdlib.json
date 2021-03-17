@@ -1,6 +1,6 @@
 {
   "name": "autocode/copenhagen",
-  "version": "2021.3.1",
+  "version": "2021.3.2",
   "timeout": 10000,
   "build": "functionscript",
   "local": {
