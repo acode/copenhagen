@@ -13,6 +13,8 @@ repository in Autocode:
 
 [<img src="https://open.autocode.com/static/images/open.svg?" width="192">](https://open.autocode.com/)
 
+And documentation is available at [copenhagen.autocode.com](https://copenhagen.autocode.com).
+
 # Getting Started
 
 To get started with Copenhagen, add `copenhagen.0-1-0.min.css`

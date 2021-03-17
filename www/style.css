@@ -128,3 +128,18 @@ body .docs .method .param-name {
   color: #202020;
   margin-right: 4px;
 }
+
+@media screen and (max-width: 800px) {
+
+  body .nav {
+    padding-top: 4px;
+    font-size: 12px;
+    display: block;
+    text-align: center;
+  }
+
+  body .docs .methods-list {
+    grid-template-columns: 1fr 1fr;
+  }
+
+}
