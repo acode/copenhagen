@@ -11,16 +11,582 @@
   </head>
   <body>
     <div class="nav">
-      <a href="/docs.html">API Documentation</a>
-      <a href="https://github.com/autocodehq/copenhagen/">View on GitHub</a>
+      <a href="/">Copenhagen Editor</a>
+      |
+      <span>API Documentation</span>
+      |
+      <a href="https://github.com/acode/copenhagen/">View on GitHub</a>
+      |
+      <a href="https://autocode.com/app/autocode/copenhagen/">Install on Autocode</a>
     </div>
     <div class="docs">
-      docs<br>
-      docs<br>
-      docs<br>
-      docs<br>
-      docs<br>
-      docs<br>
+
+
+      <div class="method">
+        <div class="method-name">
+          <a name="addAutocomplete">CPHEditor#addAutocomplete</a>
+        </div>
+        <div class="method-description">
+          Create a custom autocompletion detector to add your own autocomplete box.
+          The <code>enableFn</code> takes the form <code>function (editor, selection, inString, inComment)</code>
+          and can return any sort of <code>result</code> you want. When rendered, if <code>enableFn()</code>
+          returns a truthy value, the editor will dispatch an <code>autocomplete</code> event
+          with the parameters <code>(editor, name, result, cursorRectangle)</code>. You can
+          use this to build your own autcompletion element.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">name</span> The name of the autocompletion handler
+        </div>
+        <div class="method-param">
+          <span class="param-type">function</span><span class="param-name">enableFn</span> The autocompletion enablement handler
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="addHotkey">CPHEditor#addHotkey</a>
+        </div>
+        <div class="method-description">
+          Adds a hotkey handler with the format <code>function (value, cursors) { ... }</code>
+          If a hotkey is added, the default behavior will be prevented.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">key</span> Hotkey format in order <code>ctrl+alt+shift+key</code>
+        </div>
+        <div class="method-param">
+          <span class="param-type">function</span><span class="param-name">fn</span> Hotkey handler
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="animateNo">CPHEditor#animateNo</a>
+        </div>
+        <div class="method-description">
+          Shakes the editor back-and-forth, indicating no action can be taken.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="blur">CPHEditor#blur</a>
+        </div>
+        <div class="method-description">
+          Blurs the editor (removes focus)
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="canSuggest">CPHEditor#canSuggest</a>
+        </div>
+        <div class="method-description">
+          Tells us whether or not the editor can currently return typeahead or
+          other suggestions.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="clearHistory">CPHEditor#clearHistory</a>
+        </div>
+        <div class="method-description">
+          Clears all user action history. This *does not* re-render the editor.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="clearMetadata">CPHEditor#clearMetadata</a>
+        </div>
+        <div class="method-description">
+          Clears metadata on the editor, if needed. This will dispatch a <code>metadata</code> event
+          and <code>metadata</code>/${key}` event that can be listener to via <code>editor.on('metadata', fn)</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">key</span> The metadata key to clear
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="disable">CPHEditor#disable</a>
+        </div>
+        <div class="method-description">
+          Disables the editor. The user can not make further changes or scroll the
+          editor.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="enable">CPHEditor#enable</a>
+        </div>
+        <div class="method-description">
+          Enables the editor.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="find">CPHEditor#find</a>
+        </div>
+        <div class="method-description">
+          Open the find and replace dialog for the editor.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">value</span> The value to search for
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="findComplements">CPHEditor#findComplements</a>
+        </div>
+        <div class="method-description">
+          Finds the complement of a character at a specific index based on the
+          language dictionary.
+          e.g. finds <code>}</code> when <code>{</code> is located at the specified index.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">value</span> The value to search through
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">n</span> The character index to check
+        </div>
+        <div class="method-returns">
+          <span class="param-type">array</span>Result in format [leftIndex, rightIndex]
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="focus">CPHEditor#focus</a>
+        </div>
+        <div class="method-description">
+          Sets focus to the editor
+        </div>
+        <div class="method-param">
+          <span class="param-type">boolean</span><span class="param-name">selectAll</span> Whether or not to select entire contents of the editor
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="getActiveFormatter">CPHEditor#getActiveFormatter</a>
+        </div>
+        <div class="method-description">
+          Retrieves the active formatter function based on the active language
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="getActiveLanguage">CPHEditor#getActiveLanguage</a>
+        </div>
+        <div class="method-description">
+          Retrieve the currently active language for the editor
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="getActiveLanguageDictionary">CPHEditor#getActiveLanguageDictionary</a>
+        </div>
+        <div class="method-description">
+          Retrieves the currently active language dictionary for the editor.
+          Languages are added via <code>CPHEditor#languages</code>.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="getFormatter">CPHEditor#getFormatter</a>
+        </div>
+        <div class="method-description">
+          Retrieves the formatter function for a language or return the <code>text</code>
+          formatter if it is not found.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">language</span> The language of the formatter
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="getMetadata">CPHEditor#getMetadata</a>
+        </div>
+        <div class="method-description">
+          Retrieves metadata from the editor, if needed
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">key</span> The metadata key to retrieve
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">defaultValue</span> The default value to return if not set
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="getValue">CPHEditor#getValue</a>
+        </div>
+        <div class="method-description">
+          Retrieves the current value of the editor
+        </div>
+        <div class="method-returns">
+          <span class="param-type">string</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="gotoHistory">CPHEditor#gotoHistory</a>
+        </div>
+        <div class="method-description">
+          Navigate the user action history, forward or backward.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">amount</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="hasFocus">CPHEditor#hasFocus</a>
+        </div>
+        <div class="method-description">
+          Determine whether the editor is focused, returns true if so
+        </div>
+        <div class="method-returns">
+          <span class="param-type">boolean</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="hide">CPHEditor#hide</a>
+        </div>
+        <div class="method-description">
+          Hide the editor (set display = none)
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="inComment">CPHEditor#inComment</a>
+        </div>
+        <div class="method-description">
+          Determines whether a specific character index is within a comment or not
+          based on the language dictionary.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">n</span> The character index to check
+        </div>
+        <div class="method-returns">
+          <span class="param-type">boolean</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="inString">CPHEditor#inString</a>
+        </div>
+        <div class="method-description">
+          Determines whether a specific character index is within a string or not
+          based on the language dictionary.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">n</span> The character index to check
+        </div>
+        <div class="method-returns">
+          <span class="param-type">boolean</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="isReadOnly">CPHEditor#isReadOnly</a>
+        </div>
+        <div class="method-description">
+          Retrieve the current read-only status of the editor.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="open">CPHEditor#open</a>
+        </div>
+        <div class="method-description">
+          Opens the editor instance. Typically used after an editor is created manually
+          via <code>editor = new Copenhagen.Editor()</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">HTMLElement</span><span class="param-name">el</span> The element to open the editor on
+        </div>
+        <div class="method-param">
+          <span class="param-type">boolean</span><span class="param-name">focus</span> Whether or not to focus the editor. Defaults to <code>true</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">boolean</span><span class="param-name">replaceText</span> Whether or not to use the existing text inside of the HTMLElement to populate the editor. Defaults to <code>false</code>.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="removeAutocomplete">CPHEditor#removeAutocomplete</a>
+        </div>
+        <div class="method-description">
+          Removes an autocompletion detector
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">name</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="removeHotkey">CPHEditor#removeHotkey</a>
+        </div>
+        <div class="method-description">
+          Removes a hotkey handler
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">key</span> Hotkey format in order <code>ctrl+alt+shift+key</code>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="render">CPHEditor#render</a>
+        </div>
+        <div class="method-description">
+          Renders the editor on the next available frame, if applicable.
+          Multiple calls to <code>.render</code> will not negatively impact performance, extra
+          calls are debounced.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">value</span> The value to render within the editor, should typically be <code>editor.value</code> or <code>editor.getValue()</code>
+        </div>
+        <div class="method-param">
+          <span class="param-type">boolean</span><span class="param-name">forceRender</span> Force an update on the next frame
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="save">CPHEditor#save</a>
+        </div>
+        <div class="method-description">
+          Dispatches a "save" event and creates a history entry if the user has performed an action.
+          You can listen to this action via <code>editor.on('save', function (editor, value) { ... })</code>
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">value</span> The value to set in the editor
+        </div>
+        <div class="method-returns">
+          <span class="param-type">string</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="scrollPage">CPHEditor#scrollPage</a>
+        </div>
+        <div class="method-description">
+          Scrolls the editor by a visible "page" amount based on the height of the
+          editor. This *will* trigger a re-render.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">direction</span> Either "up" or "down"
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="scrollToText">CPHEditor#scrollToText</a>
+        </div>
+        <div class="method-description">
+          Scrolls to the currently selected text in the editor. This *will* trigger
+          a re-render.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="scrollToLine">CPHEditor#scrollToLine</a>
+        </div>
+        <div class="method-description">
+          Scrolls to a specific line index in the editor. This *will* trigger a
+          re-render.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">index</span> The line index to scroll to
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="scrollTo">CPHEditor#scrollTo</a>
+        </div>
+        <div class="method-description">
+          Scrolls the editor to a specific (x, y) coordinate from the top left of
+          the editor. This *will* trigger a re-render.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">x</span> the x coordinate (from left)
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">y</span> the y coordinate (from top)
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="select">CPHEditor#select</a>
+        </div>
+        <div class="method-description">
+          Selects text in the editor at a specific start and end index.
+          This *will* trigger a re-render.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">start</span> The start index to select
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">end</span> The end index to select
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setError">CPHEditor#setError</a>
+        </div>
+        <div class="method-description">
+          Sets an error state in the editor. This *will* trigger a re-render.
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">lineIndex</span> The line index the error is on, 0-indexed
+        </div>
+        <div class="method-param">
+          <span class="param-type">integer</span><span class="param-name">column</span> The column index the error is on, 0-indexed
+        </div>
+        <div class="method-returns">
+          <span class="param-type">object</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setFormatter">CPHEditor#setFormatter</a>
+        </div>
+        <div class="method-description">
+          Sets a custom formatter for a language. Custom formatter functions take the
+          form <code>function (line, inString, inComment) { ... }</code> where <code>inString</code> and
+          <code>inComment</code> are determined by the language dictionary.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">language</span> The language the formatter applies to
+        </div>
+        <div class="method-param">
+          <span class="param-type">function</span><span class="param-name">fn</span> The formatter function
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setLanguage">CPHEditor#setLanguage</a>
+        </div>
+        <div class="method-description">
+          Sets the language for the editor. This *does not* automatically re-render the editor.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">language</span> The language to set, e.g. javascript. Must be supported in the languages dictionary
+        </div>
+        <div class="method-returns">
+          <span class="param-type">string</span>The active language
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setMaximized">CPHEditor#setMaximized</a>
+        </div>
+        <div class="method-description">
+          Set maximized mode on the editor so that it takes up all of its relative parent's
+          height. This *does not* trigger a re-render. You must do that manually.
+        </div>
+        <div class="method-param">
+          <span class="param-type">boolean</span><span class="param-name">value</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setMetadata">CPHEditor#setMetadata</a>
+        </div>
+        <div class="method-description">
+          Sets metadata on the editor, if needed. This will dispatch a <code>metadata</code> event
+          and <code>metadata/${key}</code> event that can be listener to via <code>editor.on('metadata', fn)</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">key</span> The metadata key to set
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">value</span> The metadata value to set
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setReadOnly">CPHEditor#setReadOnly</a>
+        </div>
+        <div class="method-description">
+          Set read-only mode on the editor. This *does not* trigger a re-render. You
+          must do that manually.
+        </div>
+       <div class="method-param">
+         <span class="param-type">boolean</span><span class="param-name">value</span> if undefined, will set <code>true</code>
+       </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setValue">CPHEditor#setValue</a>
+        </div>
+        <div class="method-description">
+          Sets the value of the editor. If a user has already performed an action,
+          this creates a history entry. This *will* trigger a re-render.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">value</span> The value to set in the editor
+        </div>
+        <div class="method-returns">
+          <span class="param-type">string</span>
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="show">CPHEditor#show</a>
+        </div>
+        <div class="method-description">
+          Show the editor (make it visible)
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="userAction">CPHEditor#userAction</a>
+        </div>
+        <div class="method-description">
+          Perform a user action. Specific user actions are available on the <code>CPHCursor</code>
+          object, prefixed with the word <code>calculate</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">name</span> The name of the user action to dispatch
+        </div>
+      </div>
+
     </div>
   </body>
 </html>

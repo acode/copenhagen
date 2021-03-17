@@ -1240,7 +1240,7 @@ CPHEditor.prototype.gotoHistory = function (amount) {
 /**
  * Perform a user action. Specific user actions are available on the `CPHCursor`
  * object, prefixed with the word `calculate`.
- * @param {integer} amount
+ * @param {string} name The name of the user action to dispatch
  */
 CPHEditor.prototype.userAction = function (name) {
   if (this.isReadOnly() || !this.isEnabled()) {
@@ -2115,6 +2115,7 @@ CPHEditor.prototype.scrollToText = function () {
 /**
  * Scrolls to a specific line index in the editor. This *will* trigger a
  * re-render.
+ * @param {integer} index The line index to scroll to
  */
 CPHEditor.prototype.scrollToLine = function (index) {
   this.lineHeight = this.sampleLineElement.offsetHeight;
@@ -2301,7 +2302,7 @@ CPHEditor.prototype.inString = function (n) {
  * e.g. finds `}` when `{` is located at the specified index.
  * @param {string} value The value to search through
  * @param {integer} n The character index to check
- * @returns {boolean}
+ * @returns {array} Result in format [leftIndex, rightIndex]
  */
 CPHEditor.prototype.findComplements = function (value, n) {
   var str = this.inString(n);
@@ -2496,7 +2497,7 @@ CPHEditor.prototype.setMaximized = function (maximized) {
 
 /**
  * Sets metadata on the editor, if needed. This will dispatch a `metadata` event
- * and `metadata/${key}` event that can be listener to via `editor.on('metdata', fn)`.
+ * and `metadata/${key}` event that can be listener to via `editor.on('metadata', fn)`.
  * @param {string} key The metadata key to set
  * @param {string} value The metadata value to set
  */
@@ -2510,7 +2511,7 @@ CPHEditor.prototype.setMetadata = function (key, value) {
 
 /**
  * Clears metadata on the editor, if needed. This will dispatch a `metadata` event
- * and `metadata/${key}` event that can be listener to via `editor.on('metdata', fn)`.
+ * and `metadata/${key}` event that can be listener to via `editor.on('metadata', fn)`.
  * @param {string} key The metadata key to clear
  */
 CPHEditor.prototype.clearMetadata = function (key) {
@@ -2591,6 +2592,7 @@ CPHEditor.prototype.addHotkey = function (key, fn) {
 
 /**
 * Removes a hotkey handler
+* @param {string} key Hotkey format in order `ctrl+alt+shift+key`
 */
 CPHEditor.prototype.removeHotkey = function (key) {
   key = key + '';

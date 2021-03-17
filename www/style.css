@@ -24,7 +24,7 @@ body .nav {
   z-index: 1;
   font-size: 14px;
   font-weight: 600;
-  color: #909090;
+  color: #d0d0d0;
 }
 
 body .nav span {
@@ -56,14 +56,15 @@ strong {
 }
 
 code {
-  background-color: #f0f0f0;
+  background-color: #fed;
+  color: #e93;
   display: inline-block;
   border-radius: 3px;
-  font-size: 1em;
+  font-size: 1.0em;
   line-height: 1.4em;
   padding: 0em 0.4em;
+  vertical-align: middle;
   margin: 0em 0.2em;
-  font-weight: 700;
 }
 
 a:link, a:visited, a:active {
@@ -73,4 +74,46 @@ a:link, a:visited, a:active {
 
 a:hover {
   text-decoration: underline;
+}
+
+body .docs {
+  max-width: 800px;
+  padding: 16px;
+  margin: 0px auto;
+  margin-top: 48px;
+}
+
+body .docs .method {
+  border-bottom: 1px solid #d0d0d0;
+  padding: 32px 0px;
+}
+
+body .docs .method .method-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #202020;
+}
+
+body .docs .method .method-description {
+  margin: 16px;
+  padding: 0px 16px;
+  border-left: 4px solid #d0d0d0;
+}
+
+body .docs .method .method-param,
+body .docs .method .method-returns {
+  padding: 8px;
+}
+
+body .docs .method .param-type {
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  padding: 4px 8px;
+  margin-right: 4px;
+}
+
+body .docs .method .param-name {
+  font-weight: 700;
+  color: #202020;
+  margin-right: 4px;
 }
