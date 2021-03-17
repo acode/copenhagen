@@ -170,63 +170,6 @@ CPHEditor.prototype.constructor = CPHEditor;
 CPHEditor.prototype.controlName = 'CPHEditor';
 window.Controls['CPHEditor'] = CPHEditor;
 
-CPHEditor.prototype.__initialize__ = function (backoff) {
-  // Only initialize if not hidden
-  if (this.isVisible() && !this._initialized) {
-    backoff = parseInt(backoff) || 0;
-
-    var el = this.element();
-    var initialized = true;
-    while (el = el.parentNode) {
-      if (el === document) {
-        initialized = true;
-        break;
-      }
-    }
-
-    if (
-      initialized && (
-        document.readyState === 'complete' ||
-        document.readyState === 'loaded' ||
-        document.readyState === 'interactive'
-      )
-    ) {
-      this._initialized = true;
-      this.lineHeight = this.sampleLineElement.offsetHeight;
-      this.paddingLeft = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-left')) || 0;
-      this.paddingTop = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-top')) || 0;
-      this.paddingBottom = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-bottom')) || 0;
-      this.setMaximized(this.maximized);
-      this.height = this.textboxElement.offsetHeight;
-      this.width = this.textboxElement.offsetWidth;
-      this.render(this.value);
-      // If DOM renders in asynchronously, repeat this...
-      window.requestAnimationFrame(function () {
-        this.lineHeight = this.sampleLineElement.offsetHeight;
-        this.paddingLeft = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-left')) || 0;
-        this.paddingTop = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-top')) || 0;
-        this.paddingBottom = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-bottom')) || 0;
-        this.setMaximized(this.maximized);
-        this.height = this.textboxElement.offsetHeight;
-        this.width = this.textboxElement.offsetWidth;
-        this.render(this.value, true);
-      }.bind(this));
-    } else if (!backoff) {
-      window.requestAnimationFrame(this.__initialize__.bind(this, 1));
-    } else {
-      // Exponential backoff for initialization
-      //  Prevents latency on huge page reflows when editor added dynamically
-      setTimeout(this.__initialize__.bind(this, backoff * 2), backoff);
-    }
-  }
-};
-
-CPHEditor.prototype.show = function () {
-  // Initialize when first shown, if hidden to begin with
-  Control.prototype.show.call(this, arguments);
-  this.__initialize__();
-};
-
 CPHEditor.prototype.formatters = {
   'text': function (line) {
     return safeHTML(line);
@@ -1026,6 +969,57 @@ CPHEditor.prototype.eventListeners = {
   }
 };
 
+CPHEditor.prototype.__initialize__ = function (backoff) {
+  // Only initialize if not hidden
+  if (this.isVisible() && !this._initialized) {
+    backoff = parseInt(backoff) || 0;
+
+    var el = this.element();
+    var initialized = true;
+    while (el = el.parentNode) {
+      if (el === document) {
+        initialized = true;
+        break;
+      }
+    }
+
+    if (
+      initialized && (
+        document.readyState === 'complete' ||
+        document.readyState === 'loaded' ||
+        document.readyState === 'interactive'
+      )
+    ) {
+      this._initialized = true;
+      this.lineHeight = this.sampleLineElement.offsetHeight;
+      this.paddingLeft = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-left')) || 0;
+      this.paddingTop = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-top')) || 0;
+      this.paddingBottom = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-bottom')) || 0;
+      this.setMaximized(this.maximized);
+      this.height = this.textboxElement.offsetHeight;
+      this.width = this.textboxElement.offsetWidth;
+      this.render(this.value);
+      // If DOM renders in asynchronously, repeat this...
+      window.requestAnimationFrame(function () {
+        this.lineHeight = this.sampleLineElement.offsetHeight;
+        this.paddingLeft = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-left')) || 0;
+        this.paddingTop = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-top')) || 0;
+        this.paddingBottom = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-bottom')) || 0;
+        this.setMaximized(this.maximized);
+        this.height = this.textboxElement.offsetHeight;
+        this.width = this.textboxElement.offsetWidth;
+        this.render(this.value, true);
+      }.bind(this));
+    } else if (!backoff) {
+      window.requestAnimationFrame(this.__initialize__.bind(this, 1));
+    } else {
+      // Exponential backoff for initialization
+      //  Prevents latency on huge page reflows when editor added dynamically
+      setTimeout(this.__initialize__.bind(this, backoff * 2), backoff);
+    }
+  }
+};
+
 CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
   if (createCursor === true) {
     this.user.createCursor();
@@ -1087,19 +1081,51 @@ CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
   this.render(this.value);
 };
 
+/**
+ * Show the editor (make it visible)
+ */
+CPHEditor.prototype.show = function () {
+  // Initialize when first shown, if hidden to begin with
+  Control.prototype.show.call(this, arguments);
+  return this.__initialize__();
+};
+
+/**
+ * Hide the editor (set display = none)
+ */
+CPHEditor.prototype.hide = function () {
+  Control.prototype.hide.call(this, arguments);
+};
+
+/**
+ * Determine whether the editor is focused, returns true if so
+ * @returns {boolean}
+ */
 CPHEditor.prototype.hasFocus = function () {
   return document.activeElement === this.inputElement;
 };
 
+/**
+ * Sets focus to the editor
+ * @param {boolean} selectAll Whether or not to select entire contents of the editor
+ */
 CPHEditor.prototype.focus = function (selectAll) {
   this.inputElement.focus();
   selectAll && (this.select(0, this.value.length));
 };
 
+/**
+ * Blurs the editor (removes focus)
+ */
 CPHEditor.prototype.blur = function () {
   this.inputElement.blur();
 };
 
+/**
+ * Sets the language for the editor. This *does not* automatically re-render the editor.
+ * @param {string} language The language to set, e.g. javascript. Must be supported in the languages dictionary
+ * @returns {string}
+ */
 CPHEditor.prototype.setLanguage = function (language) {
   language = language || 'text';
   language = language + '';
@@ -1111,18 +1137,35 @@ CPHEditor.prototype.setLanguage = function (language) {
   return this.language;
 };
 
+/**
+ * Retrieve the currently active language for the editor
+ */
 CPHEditor.prototype.getActiveLanguage = function () {
   return this.language;
 };
 
+/**
+ * Retrieves the currently active language dictionary for the editor.
+ * Languages are added via `CPHEditor.prototype.languages`.
+ */
 CPHEditor.prototype.getActiveLanguageDictionary = function () {
   return this.languages[this.language] || this.languages['text'];
 };
 
+/**
+ * Retrieves the current value of the editor
+ * @returns {string}
+ */
 CPHEditor.prototype.getValue = function () {
   return this.value;
 };
 
+/**
+ * Sets the value of the editor. If a user has already performed an action,
+ * this creates a history entry. This will trigger a re-render.
+ * @param {string} value The value to set in the editor
+ * @returns {string}
+ */
 CPHEditor.prototype.setValue = function (value) {
   if (!this._history.userActions.length) {
     this._history.initialValue = this.value = value;
@@ -1133,17 +1176,31 @@ CPHEditor.prototype.setValue = function (value) {
   this.render(this.value);
 };
 
+/**
+ * Dispatches a "save" event and creates a history entry if the user has performed an action.
+ * You can listen to this action via `editor.on('save', function (editor, value) { ... })`
+ * @param {string} value The value to set in the editor
+ * @returns {string}
+ */
 CPHEditor.prototype.save = function () {
   this.setValue(this.value);
   this.dispatch('save', this, this.value);
+  return this.value;
 };
 
-CPHEditor.prototype.clearHistory = function (amount) {
+/**
+ * Clears all user action history. This *does not* re-render the editor.
+ */
+CPHEditor.prototype.clearHistory = function () {
   this._history.userActions = [];
   this._history.initialValue = this.value;
   this._historyIndex = -1;
 };
 
+/**
+ * Navigate the user action history, forward or backward.
+ * @param {integer} amount
+ */
 CPHEditor.prototype.gotoHistory = function (amount) {
   amount = parseInt(amount) || 0;
   var userActions = this._history.userActions;
@@ -1180,6 +1237,11 @@ CPHEditor.prototype.gotoHistory = function (amount) {
   }
 };
 
+/**
+ * Perform a user action. Specific user actions are available on the `CPHCursor`
+ * object, prefixed with the word `calculate`.
+ * @param {integer} amount
+ */
 CPHEditor.prototype.userAction = function (name) {
   if (this.isReadOnly() || !this.isEnabled()) {
     this.animateNo();
@@ -1258,10 +1320,13 @@ CPHEditor.prototype._userAction = function (name, args, lang, value, replay) {
   return value;
 };
 
-CPHEditor.prototype.getValue = function () {
-  return this.value;
-};
-
+/**
+ * Renders the editor on the next available frame, if applicable.
+ * Multiple calls to `.render` will not negatively impact performance, extra
+ * calls are debounced.
+ * @param {string} value The value to render within the editor, should typically be `editor.value` or `editor.getValue()`
+ * @param {boolean} forceRender Force an update on the next frame
+ */
 CPHEditor.prototype.render = function (value, forceRender) {
   if (this._initialized) {
     this._renderQueue.push(value);
@@ -1834,6 +1899,13 @@ CPHEditor.prototype.__render = function (
 
 };
 
+/**
+ * Sets a custom formatter for a language. Custom formatter functions take the
+ * form `function (line, inString, inComment) { ... }` where `inString` and
+ * `inComment` are determined by the language dictionary.
+ * @param {string} language The language the formatter applies to
+ * @param {function} fn The formatter function
+ */
 CPHEditor.prototype.setFormatter = function (language, fn) {
   if (typeof fn !== 'function') {
     throw new Error('.setFormatter fn must be a function');
@@ -1842,6 +1914,11 @@ CPHEditor.prototype.setFormatter = function (language, fn) {
   return language;
 };
 
+/**
+ * Retrieves the formatter function for a language or return the `text`
+ * formatter if it is not found.
+ * @param {string} language The language of the formatter
+ */
 CPHEditor.prototype.getFormatter = function (language) {
   var formatter = this.formatters[language];
   if (!formatter) {
@@ -1850,6 +1927,9 @@ CPHEditor.prototype.getFormatter = function (language) {
   return formatter;
 };
 
+/**
+ * Retrieves the active formatter function based on the active language
+ */
 CPHEditor.prototype.getActiveFormatter = function () {
   return this.getFormatter(this.language);
 };
@@ -1948,6 +2028,10 @@ CPHEditor.prototype.format = function (
   }
 };
 
+/**
+ * Scrolls to the currently selected text in the editor. This *will* trigger
+ * a re-render.
+ */
 CPHEditor.prototype.scrollToText = function () {
 
   this.__renderSelection(true);
@@ -2028,6 +2112,10 @@ CPHEditor.prototype.scrollToText = function () {
 
 };
 
+/**
+ * Scrolls to a specific line index in the editor. This *will* trigger a
+ * re-render.
+ */
 CPHEditor.prototype.scrollToLine = function (index) {
   this.lineHeight = this.sampleLineElement.offsetHeight;
   this.height = this.textboxElement.offsetHeight;
@@ -2061,6 +2149,11 @@ CPHEditor.prototype.scrollToLine = function (index) {
   this.render(this.value);
 };
 
+/**
+ * Scrolls the editor by a visible "page" amount based on the height of the
+ * editor. This *will* trigger a re-render.
+ * @param {string} direction Either "up" or "down"
+ */
 CPHEditor.prototype.scrollPage = function (direction) {
   this.lineHeight = this.sampleLineElement.offsetHeight;
   this.height = this.textboxElement.offsetHeight;
@@ -2073,6 +2166,12 @@ CPHEditor.prototype.scrollPage = function (direction) {
   }
 };
 
+/**
+ * Scrolls the editor to a specific [x, y] coordinate from the top left of
+ * the editor. This *will* trigger a re-render.
+ * @param {integer} x the x coordinate (from left)
+ * @param {integer} y the y coordinate (from top)
+ */
 CPHEditor.prototype.scrollTo = function (x, y) {
   if (x === undefined || x === null) {
     x = this.inputElement.scrollLeft;
@@ -2096,6 +2195,12 @@ CPHEditor.prototype.createCursorStateValue = function (cursors, errorPos) {
   return JSON.stringify([cursors, errorPos, hasFocus]);
 };
 
+/**
+ * Selects text in the editor at a specific start and end index.
+ * This *will* trigger a re-render.
+ * @param {integer} start The start index to select
+ * @param {integer} end The end index to select
+ */
 CPHEditor.prototype.select = function (start, end) {
   this.user.resetCursor();
   this.user.cursors[0].select(start, end);
@@ -2160,6 +2265,12 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
   return this._commentLookup = commentLookup;
 };
 
+/**
+ * Determines whether a specific character index is within a comment or not
+ * based on the language dictionary.
+ * @param {integer} n The character index to check
+ * @returns {boolean}
+ */
 CPHEditor.prototype.inComment = function (n) {
   var c = String.fromCharCode(0);
   return this._commentLookup[n] === c ||
@@ -2169,6 +2280,12 @@ CPHEditor.prototype.inComment = function (n) {
     );
 };
 
+/**
+ * Determines whether a specific character index is within a string or not
+ * based on the language dictionary.
+ * @param {integer} n The character index to check
+ * @returns {boolean}
+ */
 CPHEditor.prototype.inString = function (n) {
   var lang = this.getActiveLanguageDictionary();
   return lang.stringComplements[this._commentLookup[n]] ||
@@ -2178,6 +2295,14 @@ CPHEditor.prototype.inString = function (n) {
     ) || false;
 };
 
+/**
+ * Finds the complement of a character at a specific index based on the
+ * language dictionary.
+ * e.g. finds `}` when `{` is located at the specified index.
+ * @param {string} value The value to search through
+ * @param {integer} n The character index to check
+ * @returns {boolean}
+ */
 CPHEditor.prototype.findComplements = function (value, n) {
   var str = this.inString(n);
   var lang = this.getActiveLanguageDictionary();
@@ -2262,6 +2387,12 @@ CPHEditor.prototype.findComplements = function (value, n) {
   return [lb, rb];
 };
 
+/**
+ * Sets an error state in the editor. This *will* trigger a re-render.
+ * @param {integer} lineIndex The line index the error is on, 0-indexed
+ * @param {integer} column The column index the error is on, 0-indexed
+ * @returns {object}
+ */
 CPHEditor.prototype.setError = function (lineIndex, column) {
   if (lineIndex === null || lineIndex === undefined || lineIndex === false) {
     this._errorPos.enabled = false;
@@ -2274,6 +2405,11 @@ CPHEditor.prototype.setError = function (lineIndex, column) {
   return this._errorPos;
 };
 
+/**
+ * Set read-only mode on the editor. This *does not* trigger a re-render. You
+ * must do that manually.
+ * @param {boolean} value if undefined, will set `true`
+ */
 CPHEditor.prototype.setReadOnly = function (value) {
   value = value === undefined ? true : !!value;
   if (value) {
@@ -2288,10 +2424,16 @@ CPHEditor.prototype.setReadOnly = function (value) {
   return this._readOnly = value;
 };
 
+/**
+ * Retrieve the current read-only status of the editor.
+ */
 CPHEditor.prototype.isReadOnly = function () {
   return !!this._readOnly;
 };
 
+/**
+ * Shakes the editor back-and-forth, indicating no action can be taken.
+ */
 CPHEditor.prototype.animateNo = function () {
   this.element().classList.add('animate-no');
   clearTimeout(this._animateNoTimeout);
@@ -2300,12 +2442,19 @@ CPHEditor.prototype.animateNo = function () {
   }.bind(this), 200);
 };
 
+/**
+ * Enables the editor.
+ */
 CPHEditor.prototype.enable = function () {
   this.element().classList.remove('disabled');
   this.inputElement.removeAttribute('disabled');
   Control.prototype.enable.apply(this, arguments);
 };
 
+/**
+ * Disables the editor. The user can not make further changes or scroll the
+ * editor.
+ */
 CPHEditor.prototype.disable = function () {
   this.element().classList.add('disabled');
   this.inputElement.setAttribute('disabled', '');
@@ -2318,10 +2467,19 @@ CPHEditor.prototype.shortcut = function (hotkey) {
   }
 };
 
+/**
+ * Open the find and replace dialog for the editor.
+ * @param {string} value The value to search for
+ */
 CPHEditor.prototype.find = function (value) {
   this.control('find-replace').show(value);
 };
 
+/**
+ * Set maximized mode on the editor so that it takes up all of its relative parent's
+ * height. This *does not* trigger a re-render. You must do that manually.
+ * @param {boolean} value
+ */
 CPHEditor.prototype.setMaximized = function (maximized) {
   this.maximized = !!maximized;
   if (this.maximized) {
@@ -2336,6 +2494,12 @@ CPHEditor.prototype.setMaximized = function (maximized) {
   }
 };
 
+/**
+ * Sets metadata on the editor, if needed. This will dispatch a `metadata` event
+ * and `metadata/${key}` event that can be listener to via `editor.on('metdata', fn)`.
+ * @param {string} key The metadata key to set
+ * @param {string} value The metadata value to set
+ */
 CPHEditor.prototype.setMetadata = function (key, value) {
   key = key + '';
   value = value === undefined ? null : value;
@@ -2344,6 +2508,11 @@ CPHEditor.prototype.setMetadata = function (key, value) {
   this.dispatch('metadata/' + key, this, value);
 };
 
+/**
+ * Clears metadata on the editor, if needed. This will dispatch a `metadata` event
+ * and `metadata/${key}` event that can be listener to via `editor.on('metdata', fn)`.
+ * @param {string} key The metadata key to clear
+ */
 CPHEditor.prototype.clearMetadata = function (key) {
   key = key + '';
   delete this._metadata[key];
@@ -2351,6 +2520,11 @@ CPHEditor.prototype.clearMetadata = function (key) {
   this.dispatch('metadata/' + key, this, null);
 };
 
+/**
+ * Retrieves metadata from the editor, if needed
+ * @param {string} key The metadata key to retrieve
+ * @param {string} defaultValue The default value to return if not set
+ */
 CPHEditor.prototype.getMetadata = function (key, defaultValue) {
   key = key + '';
   defaultValue = defaultValue === undefined ? null : defaultValue;
@@ -2359,6 +2533,10 @@ CPHEditor.prototype.getMetadata = function (key, defaultValue) {
     : defaultValue;
 };
 
+/**
+ * Tells us whether or not the editor can currently return typeahead or
+ * other suggestions.
+ */
 CPHEditor.prototype.canSuggest = function () {
   return this.user.cursors.length === 1 &&
     !this.user.cursors[0].width() &&
@@ -2367,6 +2545,16 @@ CPHEditor.prototype.canSuggest = function () {
     this.isEnabled();
 };
 
+/**
+ * Create a custom autocompletion detector to add your own autocomplete box.
+ * The `enableFn` takes the form `function (editor, selection, inString, inComment)`
+ * and can return any sort of `result` you want. When rendered, if `enableFn()`
+ * returns a truthy value, the editor will dispatch an `autocomplete` event
+ * with the parameters `(editor, name, result, cursorRectangle)`. You can
+ * use this to build your own autcompletion element.
+ * @param {string} name The name of the autocompletion handler
+ * @param {function} enableFn The autocompletion enablement handler
+ */
 CPHEditor.prototype.addAutocomplete = function (name, enableFn) {
   name = name + '';
   if (typeof enableFn !== 'function') {
@@ -2376,12 +2564,22 @@ CPHEditor.prototype.addAutocomplete = function (name, enableFn) {
   return name;
 };
 
+/**
+* Removes an autocompletion detector
+* @param {string} name
+*/
 CPHEditor.prototype.removeAutocomplete = function (name) {
   name = name + '';
   delete this._autocompleteFns[name];
   return true;
 };
 
+/**
+* Adds a hotkey handler with the format `function (value, cursors) { ... }`
+* If a hotkey is added, the default behavior will be prevented.
+* @param {string} key Hotkey format in order `ctrl+alt+shift+key`
+* @param {function} fn Hotkey handler
+*/
 CPHEditor.prototype.addHotkey = function (key, fn) {
   key = key + '';
   if (typeof fn !== 'function') {
@@ -2391,12 +2589,22 @@ CPHEditor.prototype.addHotkey = function (key, fn) {
   return key;
 };
 
+/**
+* Removes a hotkey handler
+*/
 CPHEditor.prototype.removeHotkey = function (key) {
   key = key + '';
   delete this.hotkeys[key];
   return true;
 };
 
+/**
+* Opens the editor instance. Typically used after an editor is created manually
+* via `editor = new Copenhagen.Editor()`.
+* @param {HTMLElement} el The element to open the editor on
+* @param {boolean} focus Whether or not to focus the editor. Defaults to `true`.
+* @param {boolean} replaceText Whether or not to use the existing text inside of the HTMLElement to populate the editor. Defaults to `false`.
+*/
 CPHEditor.prototype.open = function (el, focus, replaceText) {
   if (replaceText) {
     var text = el.innerHTML;
