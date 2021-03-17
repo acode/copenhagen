@@ -8,6 +8,8 @@ and it's written entirely in vanilla JavaScript with only
 [feather icons](https://feathericons.com) bundled as
 dependencies.
 
+![Copenhagen Demo](/readme/gallery/01.gif)
+
 You can play around with your own installation right away by forking this
 repository in Autocode:
 
