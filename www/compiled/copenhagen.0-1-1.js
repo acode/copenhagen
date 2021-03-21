@@ -1287,6 +1287,7 @@ CPHEditor.prototype.eventListeners = {
       var type = e.inputType;
       if (type === 'insertText') {
         this.userAction('InsertText', text);
+        this.scrollToText();
       } else if (type === 'historyUndo') {
         this.gotoHistory(-1);
       } else if (type === 'historyRedo') {
@@ -1355,9 +1356,18 @@ CPHEditor.prototype.eventListeners = {
         ctrlKey && key === 'v' ||
         ctrlKey && key === 'x' ||
         ctrlKey && key === 'c' ||
-        key.endsWith('lock')
+        key.endsWith('lock') ||
+        key.startsWith('control') ||
+        key.startsWith('alt') ||
+        key === 'contextmenu' ||
+        key === 'altgraph' ||
+        key === 'os' ||
+        key === 'unidentified'
       ) {
-        // do nothing, allow native behavior
+        // Do nothing: allow native behavior
+        //  Windows ContextMenu key,
+        //  AltGraphic key and OS key,
+        //  CapsLock
       } else if (this.hotkeys[hotkey]) {
         preventDefaultAndStopPropagation();
         this.shortcut(hotkey);
@@ -1488,35 +1498,27 @@ CPHEditor.prototype.eventListeners = {
           preventDefaultAndStopPropagation();
           this.user.moveCursorsByLine(this.value, 'left');
           this.scrollToText();
-        } else if (
-          key === 'contextmenu' ||
-          key === 'altgraph' ||
-          key === 'os'
-        ) {
-          // Do nothing: allow native behavior
-          //  Windows ContextMenu key,
-          //  AltGraphic key and OS key
-        } else {
+        } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
           preventDefaultAndStopPropagation();
-          if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
-            this.userAction('InsertText', e.key);
-          } else if (
-            revComplement &&
-            this.value[this.user.cursors[0].selectionStart - 1] === revComplement
-          ) {
-            if (this.value[this.user.cursors[0].selectionStart] === e.key) {
-              this.user.moveCursors(this.value, 'right', 1);
-            } else {
-              this.userAction('InsertText', e.key);
-            }
-          } else if (
-            fwdComplement &&
-            this.value[this.user.cursors[0].selectionStart] !== fwdComplement
-          ) {
-            this.userAction('InsertText', e.key + fwdComplement, -1);
+          this.userAction('InsertText', e.key);
+          this.scrollToText();
+        } else if (
+          revComplement &&
+          this.value[this.user.cursors[0].selectionStart - 1] === revComplement
+        ) {
+          preventDefaultAndStopPropagation();
+          if (this.value[this.user.cursors[0].selectionStart] === e.key) {
+            this.user.moveCursors(this.value, 'right', 1);
           } else {
             this.userAction('InsertText', e.key);
           }
+          this.scrollToText();
+        } else if (
+          fwdComplement &&
+          this.value[this.user.cursors[0].selectionStart] !== fwdComplement
+        ) {
+          preventDefaultAndStopPropagation();
+          this.userAction('InsertText', e.key + fwdComplement, -1);
           this.scrollToText();
         }
       }
