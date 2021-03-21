@@ -1254,7 +1254,7 @@ CPHEditor.prototype.eventListeners = {
     mousedown: function (e, el) {
       if (e.type === 'touchstart') { // touchstarts get routed here
         this._initialSelection = null; // reset initial selection
-        return; // this is handeled by selectionchange
+        return; // this is handled by selectionchange
       } else if (e.buttons === 2) {
         return;
       } else if (!this._selecting) {
