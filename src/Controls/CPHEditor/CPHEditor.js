@@ -88,6 +88,8 @@ function CPHEditor (app, cfg) {
   this._autocompleteFns = {};
   this._autocomplete = null;
 
+  this._emulationMode = false;
+
   this.hotkeys = Object.keys(this.constructor.prototype.hotkeys)
     .reduce(function (hotkeys, key) {
       hotkeys[key] = this.constructor.prototype.hotkeys[key];
@@ -615,12 +617,16 @@ CPHEditor.prototype.eventListeners = {
   },
   'textarea': {
     focus: function (e) {
-      this.element().classList.add('focus');
+      if (!this._emulationMode) {
+        this.element().classList.add('focus');
+      }
       this.dispatch('focus', this, e);
       this.render(this.value);
     },
     blur: function (e) {
-      this.element().classList.remove('focus');
+      if (!this._emulationMode) {
+        this.element().classList.remove('focus');
+      }
       if (this._contextMenu) {
         this._contextMenu.close();
       }
@@ -1252,6 +1258,30 @@ CPHEditor.prototype.gotoHistory = function (amount) {
  */
 CPHEditor.prototype.userAction = function (name) {
   if (this.isReadOnly() || !this.isEnabled()) {
+    this.animateNo();
+  } else {
+    var args = [].slice.call(arguments, 1);
+    return this._userAction(
+      name,
+      args,
+      this.getActiveLanguageDictionary(),
+      this.value,
+      false
+    );
+  }
+};
+
+/**
+ * Emulate a user action. Use this when emulation mode is enabled.
+ * Will throw an error if not in emulation mode.
+ * Specific user actions are available on the `CPHCursor`
+ * object, prefixed with the word `calculate`.
+ * @param {string} name The name of the user action to dispatch
+ */
+CPHEditor.prototype.emulateUserAction = function (name) {
+  if (!this._emulationMode) {
+    throw new Error('Can only emulateUserAction in EmulationMode')
+  } if (!this.isEnabled()) {
     this.animateNo();
   } else {
     var args = [].slice.call(arguments, 1);
@@ -2631,4 +2661,20 @@ CPHEditor.prototype.open = function (el, focus, replaceText) {
     this.clearHistory();
   }
   Control.prototype.open.call(this, el, focus);
+};
+
+/**
+* Sets emulation mode. Turning this on will cause the editor to always appear "in focus".
+* It will also allow you to use "emulateUserAction", which can dispatch a user action
+* even in "readonly" mode.
+* @param {boolean} value Enable or disable emulation, will default to `true`
+*/
+CPHEditor.prototype.setEmulationMode = function (value) {
+  value = value === undefined ? true : !!value;
+  if (value || this.hasFocus()) {
+    this.element().classList.add('focus');
+  } else {
+    this.element().classList.remove('focus');
+  }
+  return this._emulationMode = value;
 };

@@ -2,8 +2,8 @@
   <head>
     <title>Copenhagen Editor</title>
     <!-- Copenhagen Editor -->
-    <link rel="stylesheet" href="./compiled/copenhagen.0-1-1.min.css">
-    <script src="./compiled/copenhagen.0-1-1.min.js"></script>
+    <link rel="stylesheet" href="./compiled/copenhagen.0-1-2.min.css">
+    <script src="./compiled/copenhagen.0-1-2.min.js"></script>
     <!-- Main Styles -->
     <link rel="icon" type="image/png" href="./favicon.png">
     <link rel="stylesheet" href="./style.css"></script>
@@ -26,8 +26,8 @@
       </h1>
 
       <p>
-        To get started with Copenhagen, add <code>copenhagen.0-1-1.min.css</code>
-        and <code>copenhagen.0-1-1.min.js</code> to your web project.
+        To get started with Copenhagen, add <code>copenhagen.0-1-2.min.css</code>
+        and <code>copenhagen.0-1-2.min.js</code> to your web project.
         You can find them <a href="https://github.com/acode/copenhagen/">on GitHub</a>.
         Then import them to your webpage by adding the following lines in the
         <code>&lt;head&gt;</code> tag of your webpage:
@@ -35,8 +35,8 @@
 
       <div class="editor" data-language="html" data-maxrows="20">
         <!-- Copenhagen Editor -->
-        &lt;link rel="stylesheet" href="./compiled/copenhagen.0-1-1.min.css"&gt;
-        &lt;script src="./compiled/copenhagen.0-1-1.min.js"&gt;&lt;/script&gt;
+        &lt;link rel="stylesheet" href="./compiled/copenhagen.0-1-2.min.css"&gt;
+        &lt;script src="./compiled/copenhagen.0-1-2.min.js"&gt;&lt;/script&gt;
       </div>
 
       <p>
@@ -166,6 +166,7 @@
         <a href="#clearHistory">CPHEditor#clearHistory</a>
         <a href="#clearMetadata">CPHEditor#clearMetadata</a>
         <a href="#disable">CPHEditor#disable</a>
+        <a href="#emulateUserAction">CPHEditor#emulateUserAction</a>
         <a href="#enable">CPHEditor#enable</a>
         <a href="#find">CPHEditor#find</a>
         <a href="#findComplements">CPHEditor#findComplements</a>
@@ -192,6 +193,7 @@
         <a href="#scrollToLine">CPHEditor#scrollToLine</a>
         <a href="#scrollTo">CPHEditor#scrollTo</a>
         <a href="#select">CPHEditor#select</a>
+        <a href="#setEmulationMode">CPHEditor#setEmulationMode</a>
         <a href="#setError">CPHEditor#setError</a>
         <a href="#setFormatter">CPHEditor#setFormatter</a>
         <a href="#setLanguage">CPHEditor#setLanguage</a>
@@ -297,6 +299,21 @@
         <div class="method-description">
           Disables the editor. The user can not make further changes or scroll the
           editor.
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="emulateUserAction">CPHEditor#emulateUserAction</a>
+        </div>
+        <div class="method-description">
+          Emulate a user action. Use this when emulation mode is enabled.
+          Will throw an error if not in emulation mode.
+          Specific user actions are available on the <code>CPHCursor</code>
+          object, prefixed with the word <code>calculate</code>.
+        </div>
+        <div class="method-param">
+          <span class="param-type">string</span><span class="param-name">name</span> The name of the user action to dispatch
         </div>
       </div>
 
@@ -636,6 +653,23 @@
         </div>
         <div class="method-param">
           <span class="param-type">integer</span><span class="param-name">end</span> The end index to select
+        </div>
+      </div>
+
+      <div class="method">
+        <div class="method-name">
+          <a name="setEmulationMode">CPHEditor#setEmulationMode</a>
+        </div>
+        <div class="method-description">
+          Sets emulation mode. Turning this on will cause the editor to always appear "in focus".
+          It will also allow you to use "emulateUserAction", which can dispatch a user action
+          even in "readonly" mode.
+        </div>
+        <div class="method-param">
+          <span class="param-type">boolean</span><span class="param-name">value</span> Enable or disable emulation, will default to <code>true</code>
+        </div>
+        <div class="method-returns">
+          <span class="param-type">boolean</span>
         </div>
       </div>
 

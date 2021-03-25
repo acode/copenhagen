@@ -1,3 +1,3 @@
 window.addEventListener('DOMContentLoaded', function () {
-  var editors = Copenhagen.initSelectorAll('.editor');
+  window.editors = Copenhagen.initSelectorAll('.editor');
 });

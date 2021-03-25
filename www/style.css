@@ -116,6 +116,18 @@ body .docs .method .method-returns {
   padding: 8px;
 }
 
+body .docs .method .method-returns {
+  margin-left: 16px;
+  margin-top: 16px;
+  border-left: 4px solid #f0f0f0;
+}
+
+body .docs .method .method-returns:before {
+  content: 'returns';
+  display: inline-block;
+  font-weight: 600;
+}
+
 body .docs .method .param-type {
   background-color: #f0f0f0;
   border-radius: 3px;
