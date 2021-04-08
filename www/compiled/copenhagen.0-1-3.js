@@ -631,6 +631,7 @@ function CPHEditor (app, cfg) {
   this.codeCompleter = new CodeCompleter();
   this._suggestion = null;
 
+  this._blockLookup = '';
   this._commentLookup = '';
   this._find = {
     value: '',
@@ -747,6 +748,7 @@ CPHEditor.prototype.formatters = {
     return safeHTML(line);
   },
   'javascript': function (line, inString, inComment) {
+    var formatted;
     if (inString) {
       formatted = hljs.highlight('javascript', '`' + line).value.replace(/\`/, '');
     } else if (inComment) {
@@ -765,8 +767,16 @@ CPHEditor.prototype.formatters = {
       ? '<span class="hljs-code">' + formatted + '</span>'
       : formatted;
   },
-  'css': function (line) {
-    return hljs.highlight('css', line).value;
+  'css': function (line, inString, inComment, inBlock) {
+    var formatted;
+    if (inBlock) {
+      formatted = hljs.highlight('css', '{' + line).value.replace(/\{/, '');
+    } else if (inComment) {
+      formatted = hljs.highlight('css', '/*' + line).value.replace(/\/\*/, '');
+    } else {
+      formatted = hljs.highlight('css', line).value;
+    }
+    return formatted;
   },
   'html': function (line) {
     return hljs.highlight('html', line).value;
@@ -775,6 +785,23 @@ CPHEditor.prototype.formatters = {
 
 CPHEditor.prototype.languages = {
   'text': {
+    stringComplements: {
+      '"': '"',
+    },
+    forwardComplements: {
+      '{': '}',
+      '(': ')',
+      '[': ']',
+      '"': '"'
+    }
+  },
+  'css': {
+    comments: {
+      '/*': '*/'
+    },
+    blocks: {
+      '{': '}'
+    },
     stringComplements: {
       '"': '"',
     },
@@ -861,6 +888,7 @@ Object.keys(CPHEditor.prototype.languages).forEach(function (name) {
   language.tabWidth = language.tabWidth || 2;
   language.commentString = language.commentString || '';
   language.comments = language.comments || {};
+  language.blocks = language.blocks || {};
   language.multiLineStrings = language.multiLineStrings || {};
   language.tabComplements = language.tabComplements || {};
   language.stringComplements = language.stringComplements || {};
@@ -1976,11 +2004,12 @@ CPHEditor.prototype.render = function (value, forceRender) {
             var sel = cursor.getSelectionInformation(value);
             var inString = this.inString(cursor.selectionStart);
             var inComment = this.inComment(cursor.selectionStart);
+            var inBlock = this.inBlock(cursor.selectionStart);
             var names = Object.keys(this._autocompleteFns);
             for (var i = 0; i < names.length; i++) {
               var name = names[i];
               var enableFn = this._autocompleteFns[name];
-              var result = enableFn(this, sel, inString, inComment);
+              var result = enableFn(this, sel, inString, inComment, inBlock);
               if (!!result) {
                 this._autocomplete = {name: name, result: result};
                 break;
@@ -2551,6 +2580,7 @@ CPHEditor.prototype.format = function (
   //  a new line with a string character
   var inComment = this.inComment(offset) && this.inComment(offset - 1);
   var inString = this.inString(offset) && this.inString(offset - 1);
+  var inBlock = this.inBlock(offset) && this.inBlock(offset - 1);
   if (complements[0] === -1 || complements[0] < offset || complements[0] > offset + value.length) {
     complements.shift();
   }
@@ -2563,7 +2593,7 @@ CPHEditor.prototype.format = function (
   } else {
     var line = value;
     var formatted;
-    formatted = this.getActiveFormatter()(line, inString, inComment);
+    formatted = this.getActiveFormatter()(line, inString, inComment, inBlock);
     var complementLine = complements.reduce(function (complementLine, n) {
       if (n >= offset && n < offset + value.length) {
         var i = n - offset;
@@ -2822,6 +2852,7 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
   // or comment. Takes single escapes into consideration.
   // This is fast hack that removes the need for a parse tree.
   var commentChar = String.fromCharCode(0);
+  var blockChar = String.fromCharCode(1);
   var value = this.value;
   var len = value.length;
   var lang = this.getActiveLanguageDictionary();
@@ -2833,6 +2864,20 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
           var isMultiLine = lang.comments[c] !== '\n';
           var start = c.split('').map(function (c) { return '\\' + c; }).join('');
           var end = lang.comments[c].split('').map(function (c) { return '\\' + c; }).join('');
+          return start + '[\\s\\S]*?(' + end + '|$)';
+        }).join('|') +
+      ')'
+    ),
+    'gi'
+  );
+  var blockRE = new RegExp(
+    (
+      '(' +
+      Object.keys(lang.blocks)
+        .map(function (c) {
+          var isMultiLine = lang.blocks[c] !== '\n';
+          var start = c.split('').map(function (c) { return '\\' + c; }).join('');
+          var end = lang.blocks[c].split('').map(function (c) { return '\\' + c; }).join('');
           return start + '[\\s\\S]*?(' + end + '|$)';
         }).join('|') +
       ')'
@@ -2871,7 +2916,23 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
       })
       .replace(commentRE, function ($0) { return commentChar.repeat($0.length); })
   );
+  this._blockLookup = value.replace(blockRE, function ($0) { return commentChar.repeat($0.length); });
   return this._commentLookup = commentLookup;
+};
+
+/**
+ * Determines whether a specific character index is within a block or not
+ * based on the language dictionary.
+ * @param {integer} n The character index to check
+ * @returns {boolean}
+ */
+CPHEditor.prototype.inBlock = function (n) {
+  var c = String.fromCharCode(0);
+  return this._blockLookup[n] === c ||
+    (
+      n === this.value.length &&
+      this._blockLookup[n - 1] === c
+    );
 };
 
 /**

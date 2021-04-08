@@ -15,6 +15,7 @@
   font-weight: 500 !important; }
 
 [control="CPHEditor"] {
+  text-align: left;
   font-size: 12px;
   position: relative;
   border-radius: 4px;

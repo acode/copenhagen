@@ -18,16 +18,16 @@ repository in Autocode:
 
 # Getting Started
 
-To get started with Copenhagen, add `copenhagen.0-1-2.min.css`
-and `copenhagen.0-1-2.min.js` to your web project.
+To get started with Copenhagen, add `copenhagen.0-1-3.min.css`
+and `copenhagen.0-1-3.min.js` to your web project.
 You can find them in this repository.
 Then import them to your webpage by adding the following lines in the
 `<head>` tag of your webpage:
 
 ```html
 <!-- Copenhagen Editor -->
-<link rel="stylesheet" href="./compiled/copenhagen.0-1-2.min.css">
-<script src="./compiled/copenhagen.0-1-2.min.js"></script>
+<link rel="stylesheet" href="./compiled/copenhagen.0-1-3.min.css">
+<script src="./compiled/copenhagen.0-1-3.min.js"></script>
 ```
 
 You can then instantiate a new Editor adding the following JavaScript
