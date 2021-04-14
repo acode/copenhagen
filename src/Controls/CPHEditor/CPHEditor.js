@@ -19,7 +19,7 @@ function CPHEditor (app, cfg) {
   this._history = {
     initialValue: cfg.value === undefined
       ? ''
-      : (cfg.value + ''),
+      : (cfg.value.replace(/\r/gi, '') + ''), // remove carriage returns
     userActions: []
   };
 
@@ -1209,13 +1209,15 @@ CPHEditor.prototype.getValue = function () {
  * @returns {string}
  */
 CPHEditor.prototype.setValue = function (value) {
+  value = value.replace(/\r/g, ''); // remove carriage returns
   if (!this._history.userActions.length) {
     this._history.initialValue = this.value = value;
+    this.render(this.value);
   } else {
-    this.value = value;
-    this.userAction('NoOp');
+    this.userAction('ResetCursor');
+    this.userAction('Select', 0, this.value.length);
+    this.userAction('InsertText', value);
   }
-  this.render(this.value);
 };
 
 /**
