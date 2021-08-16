@@ -163,24 +163,6 @@ function CPHEditor (app, cfg) {
     document.addEventListener('selectionchange', selectionchangeListener);
   }
 
-  if (window.ResizeObserver) {
-    var resizeObserver = new window.ResizeObserver(function (entries) {
-      this.render(this.value, true);
-    }.bind(this));
-    resizeObserver.observe(this.element());
-  }
-  if (window.IntersectionObserver) {
-    var intersectionObserver = new window.IntersectionObserver(function (entries) {
-      // If intersectionRatio is 0, the target is out of view
-      // and we do not need to do anything.
-      if (entries[0].intersectionRatio <= 0) {
-        return;
-      }
-      this.render(this.value, true);
-    }.bind(this));
-    intersectionObserver.observe(this.element());
-  }
-
   this._initialized = false;
   this.__initialize__();
 
@@ -1232,8 +1214,8 @@ CPHEditor.prototype.setValue = function (value) {
     this._history.initialValue = this.value = value;
     this.render(this.value);
   } else {
-    this.user.resetCursor();
-    this.select(0, this.value.length);
+    this.userAction('ResetCursor');
+    this.userAction('Select', 0, this.value.length);
     this.userAction('InsertText', value);
   }
 };
@@ -1656,22 +1638,11 @@ CPHEditor.prototype.__render = function (
   }
 
   // Get constants, can grab them on the fly.
-  var lineHeight = this.sampleLineElement.offsetHeight;
-  var height = this.textboxElement.offsetHeight;
-  var width = this.textboxElement.offsetWidth;
+  this.lineHeight = this.sampleLineElement.offsetHeight;
+  this.height = this.textboxElement.offsetHeight;
+  this.width = this.textboxElement.offsetWidth;
   var top = this.virtualTop + this.inputElement.scrollTop;
   var left = this.inputElement.scrollLeft;
-
-  if (!lineHeight || !height) {
-    // If either of these are missing, element not on DOM or initialized properly
-    // Will cascade errors (NaN)
-    return;
-  }
-
-  // Set line height
-  this.lineHeight = lineHeight;
-  this.height = height;
-  this.width = width;
 
   // Determine the visible line count.
   // Also determine where the view is focused (top and bottom)
