@@ -1724,11 +1724,22 @@ CPHEditor.prototype.__render = function (
   }
 
   // Get constants, can grab them on the fly.
-  this.lineHeight = this.sampleLineElement.offsetHeight;
-  this.height = this.textboxElement.offsetHeight;
-  this.width = this.textboxElement.offsetWidth;
+  var lineHeight = this.sampleLineElement.offsetHeight;
+  var height = this.textboxElement.offsetHeight;
+  var width = this.textboxElement.offsetWidth;
   var top = this.virtualTop + this.inputElement.scrollTop;
   var left = this.inputElement.scrollLeft;
+
+  if (!lineHeight || !height) {
+    // If either of these are missing, element not on DOM or initialized properly
+    // Will cascade errors (NaN)
+    return;
+  }
+
+  // Set line height
+  this.lineHeight = lineHeight;
+  this.height = height;
+  this.width = width;
 
   // Determine the visible line count.
   // Also determine where the view is focused (top and bottom)
@@ -2271,13 +2282,13 @@ CPHEditor.prototype.scrollToText = function () {
       ? maxLine
       : line
   }, '');
-  this.sampleLineElement.innerHTML = maxLine;
+  this.sampleLineElement.innerHTML = safeHTML(maxLine);
   var width = this.sampleLineElement.offsetWidth;
   var cursorLeftLine = this.value.slice(
     this.value.slice(0, cursor.selectionStart).lastIndexOf('\n') + 1,
     cursor.selectionStart
   );
-  this.sampleLineElement.innerHTML = cursorLeftLine;
+  this.sampleLineElement.innerHTML = safeHTML(cursorLeftLine);
   var leftOffset = this.sampleLineElement.offsetWidth - (this.paddingLeft * 2);
   if (width - this.width > this.inputElement.scrollLeft) {
     this.inputElement.scrollLeft = width - this.width;
