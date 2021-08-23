@@ -158,6 +158,25 @@ function CPHEditor (app, cfg) {
     document.addEventListener('selectionchange', selectionchangeListener);
   }
 
+  if (window.ResizeObserver) {
+    var resizeObserver = new window.ResizeObserver(function (entries) {
+      this.render(this.value, true);
+    }.bind(this));
+    resizeObserver.observe(this.element());
+  }
+
+  if (window.IntersectionObserver) {
+    var intersectionObserver = new window.IntersectionObserver(function (entries) {
+      // If intersectionRatio is 0, the target is out of view
+      // and we do not need to do anything.
+      if (entries[0].intersectionRatio <= 0) {
+        return;
+      }
+      this.render(this.value, true);
+    }.bind(this));
+    intersectionObserver.observe(this.element());
+  }
+
   this._initialized = false;
   this.__initialize__();
 
