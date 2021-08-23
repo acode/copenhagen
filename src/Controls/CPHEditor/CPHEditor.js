@@ -15,13 +15,8 @@ function CPHEditor (app, cfg) {
   this.tabout = cfg.hasOwnProperty('tabout') && cfg.tabout !== false;
   this.nolines = cfg.hasOwnProperty('nolines') && cfg.nolines !== false;
 
-  this._historyIndex = -1;
-  this._history = {
-    initialValue: cfg.value === undefined
-      ? ''
-      : (cfg.value.replace(/\r/gi, '') + ''), // remove carriage returns
-    userActions: []
-  };
+  this.history = new CPHHistory(cfg.value);
+  this.multiplayer = null;
 
   this.language = '';
   this.lineHeight = 0;
@@ -45,9 +40,9 @@ function CPHEditor (app, cfg) {
   this._lastValue = '';
   this._maxLine = ''; // max line width
   this._formatCache = {}; // keeps track of formatted lines
-  this.value = this._history.initialValue || '';
+  this.value = this.history.initialValue;
 
-  this.users = [new CPHUser()];
+  this.users = [new CPHUser(null, cfg.username)];
   this.user = this.users[0];
 
   this._lastFrameValue = '';
@@ -340,67 +335,67 @@ CPHEditor.prototype.hotkeys = {
     this.userAction('ToggleComment');
   },
   'ctrl+arrowup': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'up');
+    this.userAction('MoveCursorsByDocument', 'up');
     this.scrollToText();
   },
   'ctrl+arrowdown': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'down');
+    this.userAction('MoveCursorsByDocument', 'down');
     this.scrollToText();
   },
   'ctrl+shift+arrowup': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'up', true);
+    this.userAction('MoveCursorsByDocument', 'up', true);
     this.scrollToText();
   },
   'ctrl+shift+arrowdown': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'down', true);
+    this.userAction('MoveCursorsByDocument', 'down', true);
     this.scrollToText();
   },
   'ctrl+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'left');
+    this.userAction('MoveCursorsByLine', 'left');
     this.scrollToText();
   },
   'ctrl+arrowright': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'right');
+    this.userAction('MoveCursorsByLine', 'right');
     this.scrollToText();
   },
   'ctrl+shift+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'left', true);
+    this.userAction('MoveCursorsByLine', 'left', true);
     this.scrollToText();
   },
   'ctrl+shift+arrowright': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'right', true);
+    this.userAction('MoveCursorsByLine', 'right', true);
     this.scrollToText();
   },
   'alt+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'left');
+    this.userAction('MoveCursorsByWord', 'left');
     this.scrollToText();
   },
   'alt+arrowright': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'right');
+    this.userAction('MoveCursorsByWord', 'right');
     this.scrollToText();
   },
   'alt+shift+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'left', true);
+    this.userAction('MoveCursorsByWord', 'left', true);
     this.scrollToText();
   },
   'alt+shift+arrowright': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'right', true);
+    this.userAction('MoveCursorsByWord', 'right', true);
     this.scrollToText();
   },
   'ctrl+alt+arrowup': function (value, cursors) {
-    this.user.moveCursors(value, 'up', 1, false, true);
+    this.userAction('MoveCursors', 'up', 1, false, true);
     this.scrollToText();
   },
   'ctrl+alt+arrowdown': function (value, cursors) {
-    this.user.moveCursors(value, 'down', 1, false, true);
+    this.userAction('MoveCursors', 'down', 1, false, true);
     this.scrollToText();
   },
   'ctrl+d': function (value, cursors) {
-    this.user.createNextCursor(value);
+    this.userAction('CreateNextCursor');
     this.scrollToText();
   },
   'ctrl+u': function (value, cursors) {
-    this.user.destroyLastCursor();
+    this.userAction('DestroyLastCursor');
     this.scrollToText();
   },
   'ctrl+c': function (value, cursors) {
@@ -536,32 +531,32 @@ CPHEditor.prototype.controlActions = {
     },
     'prev': function (ctrl, value, isCaseSensitive) {
       if (this._find.prevIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.prevIndex, this._find.prevIndex + this._find.prevValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.prevIndex, this._find.prevIndex + this._find.prevValue.length)
         this.scrollToText();
       }
     },
     'next': function (ctrl, value, isCaseSensitive) {
       if (this._find.nextIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.scrollToText();
       }
     },
     'replace': function (ctrl, value, replaceValue, isCaseSensitive) {
       if (this._find.currentIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.currentIndex, this._find.currentIndex + this._find.currentValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.currentIndex, this._find.currentIndex + this._find.currentValue.length);
         this.userAction('InsertText', replaceValue);
         this.__renderFindReplace();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.scrollToText();
       } else if (this._find.nextIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.userAction('InsertText', replaceValue);
         this.__renderFindReplace();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.scrollToText();
       }
     },
@@ -569,7 +564,7 @@ CPHEditor.prototype.controlActions = {
       if (this.isReadOnly() || !this.isEnabled()) {
         this.animateNo();
       } else {
-        this.user.resetCursor();
+        this.userAction('ResetCursor');
         this.setValue(this.value.replace(this._findRE, replaceValue));
         this.render(this.value);
       }
@@ -675,13 +670,13 @@ CPHEditor.prototype.eventListeners = {
                 icon: 'rotate-ccw',
                 title: 'Undo',
                 shortcut: 'ctrl+z',
-                disabled: this._historyIndex < 0
+                disabled: !this.history.canGoto(this.user, -1)
               },
               {
                 icon: 'rotate-cw',
                 title: 'Redo',
                 shortcut: 'ctrl+y',
-                disabled: this._historyIndex === this._history.userActions.length - 1
+                disabled: !this.history.canGoto(this.user, 1)
               },
               '-',
               {
@@ -838,7 +833,7 @@ CPHEditor.prototype.eventListeners = {
       } else if (key === 'backspace') {
         preventDefaultAndStopPropagation();
         if (e.altKey) {
-          this.user.moveCursorsByWord(this.value, 'left', true);
+          this.userAction('MoveCursorsByWord', 'left', true);
           this.userAction('RemoveText', -1);
           this.scrollToText();
         } else {
@@ -850,7 +845,7 @@ CPHEditor.prototype.eventListeners = {
             var nextCharacter = this.value[this.user.cursors[0].selectionStart];
             var prevCharacter = this.value[this.user.cursors[0].selectionStart - 1];
             if (nextCharacter && nextCharacter === lang.forwardComplements[prevCharacter]) {
-              this.user.moveCursors(this.value, 'right');
+              this.userAction('MoveCursors', 'right');
               this.userAction('RemoveText', -2);
               this.scrollToText();
             } else {
@@ -875,7 +870,7 @@ CPHEditor.prototype.eventListeners = {
       } else if (key === 'delete') {
         preventDefaultAndStopPropagation();
         if (e.altKey) {
-          this.user.moveCursorsByWord(this.value, 'right', true);
+          this.userAction('MoveCursorsByWord', 'right', true);
           this.userAction('RemoveText', 1);
           this.scrollToText();
         } else {
@@ -885,7 +880,7 @@ CPHEditor.prototype.eventListeners = {
       } else if (!isModified && key !== 'shift') {
         if (key === 'escape') {
           preventDefaultAndStopPropagation();
-          this.user.resetCursor();
+          this.userAction('ResetCursor');
           if (this.control('find-replace').isVisible()) {
             this.control('find-replace').hide();
           }
@@ -927,7 +922,7 @@ CPHEditor.prototype.eventListeners = {
             } else if (this.user.cursors.length <= 1 && !this.user.cursors[0].width()) {
               if (this._suggestion) {
                 var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
-                this.user.moveCursors(this.value, 'right', selInfo.linesSuffix.length);
+                this.userAction('MoveCursors', 'right', selInfo.linesSuffix.length);
                 this.userAction('InsertText', this._suggestion.value, this._suggestion.adjust, this._suggestion.cursorLength);
               } else {
                 this.userAction('InsertText', lang.tabChar.repeat(lang.tabWidth));
@@ -948,7 +943,7 @@ CPHEditor.prototype.eventListeners = {
               this._autocomplete.result
             );
           } else {
-            this.user.moveCursors(this.value, direction, 1, e.shiftKey);
+            this.userAction('MoveCursors', direction, 1, e.shiftKey);
             this.scrollToText();
           }
         } else if (key.startsWith('page')) {
@@ -956,11 +951,11 @@ CPHEditor.prototype.eventListeners = {
           this.scrollPage(key.slice('page'.length));
         } else if (key === 'end') {
           preventDefaultAndStopPropagation();
-          this.user.moveCursorsByLine(this.value, 'right');
+          this.userAction('MoveCursorsByLine', 'right');
           this.scrollToText();
         } else if (key === 'home') {
           preventDefaultAndStopPropagation();
-          this.user.moveCursorsByLine(this.value, 'left');
+          this.userAction('MoveCursorsByLine', 'left');
           this.scrollToText();
         } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
           preventDefaultAndStopPropagation();
@@ -972,7 +967,7 @@ CPHEditor.prototype.eventListeners = {
         ) {
           preventDefaultAndStopPropagation();
           if (this.value[this.user.cursors[0].selectionStart] === e.key) {
-            this.user.moveCursors(this.value, 'right', 1);
+            this.userAction('MoveCursors', 'right', 1);
           } else {
             this.userAction('InsertText', e.key);
           }
@@ -1064,16 +1059,16 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
 
 CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
   if (createCursor === true) {
-    this.user.createCursor();
+    this.userAction('CreateCursor');
   } else if (createCursor === false) {
-    this.user.resetCursor();
+    this.userAction('ResetCursor');
   }
   var cursor = this.user.cursors[0];
   var selection = {};
   if (mouseup) {
     this._initialSelection = null;
     this._selecting = false;
-    this.user.collapseCursors();
+    this.userAction('CollapseCursors');
     this.__renderSelection();
   } else {
     if (!this._selecting || !this._initialSelection) {
@@ -1092,9 +1087,9 @@ CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
       selection.inputStart = Math.max(1, this.inputElement.selectionStart); // HACK: SelectAll support
       selection.inputEnd = this.inputElement.selectionEnd;
       if (cursor.direction() === 'rtl') {
-        cursor.select(selection.selectionEnd, selection.selectionStart);
+        this.userAction('Select', selection.selectionEnd, selection.selectionStart);
       } else {
-        cursor.select(selection.selectionStart, selection.selectionEnd);
+        this.userAction('Select', selection.selectionStart, selection.selectionEnd);
       }
       this._initialSelection = selection;
     } else if (
@@ -1105,18 +1100,13 @@ CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
       selection.ltr = false;
       selection.selectionStart = this.virtualCursorOffset + this.inputElement.selectionStart;
       selection.selectionEnd = this._initialSelection.selectionEnd;
-      selection.inputStart = this.inputElement.selectionStart;
-      selection.inputEnd = this.inputElement.selectionEnd;
-      cursor.select(selection.selectionEnd, selection.selectionStart);
+      this.userAction('Select', selection.selectionEnd, selection.selectionStart);
     } else {
       selection.ltr = true;
       selection.selectionStart = this._initialSelection.selectionStart;
       selection.selectionEnd = this.virtualCursorOffset + this.inputElement.selectionEnd;
-      selection.inputStart = this.inputElement.selectionStart;
-      selection.inputEnd = this.inputElement.selectionEnd;
-      cursor.select(selection.selectionStart, selection.selectionEnd);
+      this.userAction('Select', selection.selectionStart, selection.selectionEnd);
     }
-    cursor.clamp(this.value);
   }
   // HACK: fixScrollTop is for Firefox
   this.fixScrollTop = this.inputElement.scrollTop;
@@ -1187,11 +1177,20 @@ CPHEditor.prototype.getActiveLanguage = function () {
 };
 
 /**
+ * Retrieves the a language dictionary for the editor.
+ * Languages are added via `CPHEditor.prototype.languages`.
+ * @param {string} language The language to retrieve, e.g. javascript. Must be supported in the languages dictionary.
+ */
+CPHEditor.prototype.getLanguageDictionary = function (language) {
+  return this.languages[language] || this.languages['text'];
+};
+
+/**
  * Retrieves the currently active language dictionary for the editor.
  * Languages are added via `CPHEditor.prototype.languages`.
  */
 CPHEditor.prototype.getActiveLanguageDictionary = function () {
-  return this.languages[this.language] || this.languages['text'];
+  return this.getLanguageDictionary(this.language);
 };
 
 /**
@@ -1210,13 +1209,13 @@ CPHEditor.prototype.getValue = function () {
  */
 CPHEditor.prototype.setValue = function (value) {
   value = value.replace(/\r/g, ''); // remove carriage returns
-  if (!this._history.userActions.length) {
-    this._history.initialValue = this.value = value;
-    this.render(this.value);
+  if (!this.history.list.length) {
+    this.render(this.value = this.history.reset(value));
   } else {
     this.userAction('ResetCursor');
     this.userAction('Select', 0, this.value.length);
     this.userAction('InsertText', value);
+    this.userAction('Select', 0, 0);
   }
 };
 
@@ -1236,9 +1235,7 @@ CPHEditor.prototype.save = function () {
  * Clears all user action history. This *does not* re-render the editor.
  */
 CPHEditor.prototype.clearHistory = function () {
-  this._history.userActions = [];
-  this._history.initialValue = this.value;
-  this._historyIndex = -1;
+  this.history.reset(this.value);
 };
 
 /**
@@ -1246,39 +1243,53 @@ CPHEditor.prototype.clearHistory = function () {
  * @param {integer} amount
  */
 CPHEditor.prototype.gotoHistory = function (amount) {
-  amount = parseInt(amount) || 0;
-  var userActions = this._history.userActions;
-  var historyIndex = this._historyIndex;
-  while (userActions[historyIndex] && userActions[historyIndex].arguments[0] === 'NoOp') {
-    historyIndex = historyIndex + Math.sign(amount);
-  }
-  historyIndex = Math.max(-1, Math.min(historyIndex + amount, userActions.length - 1));
-  if (historyIndex !== this._historyIndex) {
-    this._historyIndex = historyIndex;
-    if (this._historyIndex === -1) {
-      if (userActions[0]) {
-        this.user.loadCursors(userActions[0].cursors);
-      } else {
-        this.user.loadCursors([new CPHCursor()]);
-      }
-      return this.render(this.value = this._history.initialValue);
-    } else {
-      this.value = this._history.initialValue;
-      for (var i = this._historyIndex; i > 0; i--) {
-        var userAction = userActions[i];
-        if (userAction.value !== null) {
-          break;
+
+  if (this.history.canGoto(this.user, amount)) {
+
+    var userMap = this.users.reduce(function (users, user) {
+      users[user.uuid] = user;
+      return users;
+    }, {});
+
+    var value;
+    var entries = this.history.back(this.user, Math.min(0, amount));
+    if (entries[0]) {
+      value = entries[0].value;
+      this.users.forEach(function (user) {
+        var cursors = entries[0].cursorMap[user.uuid];
+        if (cursors && cursors.length) {
+          user.loadCursors(cursors);
         }
-      }
-      for (i; i <= this._historyIndex; i++) {
-        var userAction = userActions[i];
-        this.user.loadCursors(userAction.cursors);
-        this.value = this._userAction.apply(this, userAction.arguments.concat(userAction.value, true)); // replay
-      }
-      this.user.getSortedCursors().forEach(function (cursor) { cursor.clamp(this.value); }.bind(this));
-      return this.scrollToText();
+      });
     }
+    for (i = 0; i < entries.length; i++) {
+      var userAction = entries[i];
+      var user = userMap[userAction.user_uuid];
+      value = this._userAction.apply(
+        this,
+        [].concat(user, userAction.name, userAction.args, value, false, userAction.uuid)
+      );
+    }
+
+    if (amount > 0) {
+      var value = this.value;
+      var entries = this.history.replay(this.user, amount);
+      for (i = 0; i < entries.length; i++) {
+        var userAction = entries[i];
+        var user = userMap[userAction.user_uuid];
+        value = this._userAction.apply(
+          this,
+          [].concat(user, userAction.name, userAction.args, value, true)
+        );
+      }
+    }
+
+    this.syncClients();
+
   }
+
+  return this.scrollToText();
+
 };
 
 /**
@@ -1291,14 +1302,42 @@ CPHEditor.prototype.userAction = function (name) {
     this.animateNo();
   } else {
     var args = [].slice.call(arguments, 1);
-    return this._userAction(
+    var result = this._userAction(
+      this.user,
       name,
       args,
-      this.getActiveLanguageDictionary(),
+      this.getActiveLanguage(),
       this.value,
       false
     );
+    this.syncClients();
+    return result;
   }
+};
+
+/**
+ * Perform a user action on behalf of a specific user. Can be used to have
+ * "bot" users that create input secondary to the primary user.
+ * @param {string} name The name of the user action to dispatch
+ */
+CPHEditor.prototype.executeUserAction = function (user, name) {
+  if (!(user instanceof CPHUser)) {
+    throw new Error('Cannot "executeUserAction": User not a valid CPHUser');
+  }
+  if (this.users.indexOf(user) === -1) {
+    throw new Error('Cannot "executeUserAction": User "' + user.uuid + '" not found');
+  }
+  var args = [].slice.call(arguments, 2);
+  var result = this._userAction(
+    user,
+    name,
+    args,
+    this.getActiveLanguage(),
+    this.value,
+    false
+  );
+  this.syncClients();
+  return result;
 };
 
 /**
@@ -1308,84 +1347,112 @@ CPHEditor.prototype.userAction = function (name) {
  * object, prefixed with the word `calculate`.
  * @param {string} name The name of the user action to dispatch
  */
-CPHEditor.prototype.emulateUserAction = function (name) {
+CPHEditor.prototype.emulateUserAction = function (user, name) {
   if (!this._emulationMode) {
     throw new Error('Can only emulateUserAction in EmulationMode')
   } if (!this.isEnabled()) {
     this.animateNo();
   } else {
     var args = [].slice.call(arguments, 1);
-    return this._userAction(
+    var result = this._userAction(
+      this.user,
       name,
       args,
-      this.getActiveLanguageDictionary(),
+      this.getActiveLanguage(),
       this.value,
       false
     );
+    this.syncClients();
+    return result;
   }
 };
 
-CPHEditor.prototype._userAction = function (name, args, lang, value, replay) {
-  value = typeof value === 'string' ? value : null;
+CPHEditor.prototype._userAction = function (user, name, args, lang, value, replay, historyUUID) {
+  value = typeof value === 'string' ? value : this.value;
   args = args.map(function (arg) { return arg === undefined ? null : arg; });
-  lang = lang || this.getActiveLanguageDictionary();
-  var actionName = 'calculate' + name;
-  if (!CPHCursor.prototype.hasOwnProperty(actionName)) {
-    throw new Error('Invalid user action: "' + name + '"');
-  }
-  if (!replay) {
-    this._history.userActions = this._history.userActions.slice(0, this._historyIndex + 1);
-    this._history.userActions.push({
-      value: value,
-      cursors: this.user.cursors.map(function (cursor) { return cursor.clone(); }),
-      arguments: [name, args, lang]
-    });
-    this._historyIndex = this._history.userActions.length - 1;
-  }
-  value = value === null ? this.value : value;
-  // We want to only edit the active area for text.
-  // If we're dealing with a huge file (100k LOC),
-  //  there's a huge performance bottleneck on string composition
-  //  so work on the smallest string we need to while we perform a
-  //  large number of cursor operations.
-  var sortedCursors = this.user.getSortedCursors();
-  var bigCursor = new CPHCursor(sortedCursors[0].selectionStart, sortedCursors[sortedCursors.length - 1].selectionEnd);
-  var bigInfo = bigCursor.getSelectionInformation(value);
-  var linesStartIndex = bigInfo.linesStartIndex;
-  var linesEndIndex = bigInfo.linesEndIndex;
-  if (name === 'RemoveText' && parseInt(args[0]) < 0) { // catch backspaces
-    linesStartIndex += parseInt(args[0]);
-    linesStartIndex = Math.max(0, linesStartIndex);
-  } else if (name === 'InsertText') { // catch complements
-    linesStartIndex -= 1;
-    linesStartIndex = Math.max(0, linesStartIndex);
-  }
-  var startValue = value.slice(0, linesStartIndex);
-  var editValue = value.slice(linesStartIndex, linesEndIndex);
-  var endValue = value.slice(linesEndIndex);
-  var editOffset = linesStartIndex;
-  var offset = -editOffset;
-  for (var i = 0; i < sortedCursors.length; i++) {
-    var cursor = sortedCursors[i];
-    cursor.move(offset);
-    var result;
-    if (name === 'InsertText' && Array.isArray(args[0])) {
-      // Multi-cursor pase
-      result = cursor[actionName](editValue, [args[0][i % args[0].length]], lang);
-    } else {
-      result = cursor[actionName](editValue, args, lang);
+  var historyArguments = [args, lang];
+  if (!historyUUID) {
+    var historyResult = this.history.addEntry(
+      this.history.createEntry(this.users, user, name, historyArguments, value),
+      replay
+    );
+    if (!historyResult) {
+      return value;
     }
-    editValue = result.value;
-    cursor.move(editOffset);
-    cursor.selectRelative(result.selectRelative[0], result.selectRelative[1]);
-    offset += result.offset;
+  } else {
+    this.history.updateEntryCacheValue(historyUUID, this.users, value);
   }
-  value = startValue + editValue + endValue;
-  if (!replay) {
-    this.user.getSortedCursors().forEach(function (cursor) { cursor.clamp(value); });
-    this.render(this.value = value);
+  if (user) {
+    var actionResult = user.action(name, args, this.getLanguageDictionary(lang), value);
+    var adjustCursor = function (c, range) {
+      if (c.selectionStart >= range.selectionEnd) {
+        // cursor after range
+        return [range.result.offset, range.result.offset];
+      } else if (c.selectionStart >= range.selectionStart && c.selectionStart <= range.selectionEnd) {
+        // cursor start within range
+        if (c.selectionEnd <= range.selectionEnd) {
+          // cursor entirely inside of range
+          return [
+            range.selectionStart - c.selectionStart,
+            range.selectionStart - c.selectionEnd + range.result.selectRelative[0]
+          ];
+        }  else {
+          // cursor end outside of range
+          return [
+            range.selectionStart - c.selectionStart,
+            range.result.offset
+          ];
+        }
+      } else if (c.selectionStart < range.selectionStart && c.selectionEnd >= range.selectionStart) {
+        if (c.selectionEnd <= range.selectionEnd) {
+          // cursor start before range, end in range
+          return [
+            0,
+            range.selectionStart - c.selectionEnd + range.result.selectRelative[0]
+          ];
+        } else {
+          // cursor start before range, end after range
+          return [
+            0,
+            range.result.offset
+          ];
+        }
+      } else {
+        return [0, 0];
+      }
+    };
+    this.users
+      .filter(function (u) { return u !== user; })
+      .forEach(function (user) {
+        var cursors = user.cursors;
+        cursors.forEach(function (c) {
+          actionResult.ranges.forEach(function (range) {
+            var sel = adjustCursor(c, range);
+            c.selectRelative(sel[0], sel[1]);
+          });
+          c.clamp(actionResult.value);
+        });
+        user.collapseCursors();
+      });
+    // Fix user selection if you're highlighting stuff
+    if (user !== this.user && this._initialSelection) {
+      if (actionResult.ranges.length) {
+        actionResult.ranges.forEach(function (range) {
+          var sel = adjustCursor(this._initialSelection, range);
+          this._initialSelection.selectionStart += sel[0];
+          this._initialSelection.selectionEnd += sel[1];
+          this._initialSelection.inputStart += sel[0];
+          this._initialSelection.inputEnd += sel[1];
+        }.bind(this));
+        this.inputElement.value = actionResult.value;
+        this.__renderSelection();
+      }
+    }
+    this.render(this.value = actionResult.value);
+    return actionResult.value;
+  } else {
+    return this.value;
   }
-  return value;
 };
 
 /**
@@ -1821,9 +1888,7 @@ CPHEditor.prototype.__render = function (
     );
     for (var i = 0; i < renderLines.length; i++) {
       var line = renderLines[i];
-      var selectionPts = [];
-      var selected = false;
-      var highlighted = false;
+      var userSelections = [];
       var lineError = (
         (
           !this._autocomplete &&
@@ -1834,44 +1899,79 @@ CPHEditor.prototype.__render = function (
           : null
       );
       // Find selection points in the current line...
-      for (var ci = 0; ci < cursors.length; ci++) {
-        var c = cursors[ci];
-        var unbound = c.selectionStart < renderCursorOffset && c.selectionEnd > renderCursorOffset + line.length;
-        var lbound = c.selectionStart >= renderCursorOffset && c.selectionStart <= renderCursorOffset + line.length;
-        var rbound = c.selectionEnd >= renderCursorOffset && c.selectionEnd <= renderCursorOffset + line.length;
-        if (unbound) {
-          selected = true;
-          selectionPts.push([0, line.length, '', c.direction()]);
-        } else if (lbound && rbound) {
-          selected = true;
-          selectionPts.push([c.selectionStart - renderCursorOffset, c.selectionEnd - renderCursorOffset, 'lb rb', c.direction()]);
-          if (!c.width()) {
-            highlighted = true;
+      for (var ui = this.users.length - 1; ui >= 0; ui--) {
+        var user = this.users[ui];
+        var shouldHighlight = user === this.user;
+        var userCursors = user.collapseCursors(true);
+        var userSelection = {
+          user: user,
+          color: user.color,
+          selected: false,
+          highlighted: false,
+          selectionPts: []
+        };
+        for (var ci = 0; ci < userCursors.length; ci++) {
+          var c = userCursors[ci];
+          var unbound = c.selectionStart < renderCursorOffset && c.selectionEnd > renderCursorOffset + line.length;
+          var lbound = c.selectionStart >= renderCursorOffset && c.selectionStart <= renderCursorOffset + line.length;
+          var rbound = c.selectionEnd >= renderCursorOffset && c.selectionEnd <= renderCursorOffset + line.length;
+          if (unbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([0, line.length, '', c.direction()]);
+          } else if (lbound && rbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([c.selectionStart - renderCursorOffset, c.selectionEnd - renderCursorOffset, 'lb rb', c.direction()]);
+            if (shouldHighlight && !c.width() && userCursors.length === 1) {
+              // Should only highlight the active user's line
+              userSelection.highlighted = true;
+            }
+          } else if (lbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([c.selectionStart - renderCursorOffset, line.length, 'lb', c.direction()]);
+          } else if (rbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([0, c.selectionEnd - renderCursorOffset, 'rb', c.direction()]);
           }
-        } else if (lbound) {
-          selected = true;
-          selectionPts.push([c.selectionStart - renderCursorOffset, line.length, 'lb', c.direction()]);
-        } else if (rbound) {
-          selected = true;
-          selectionPts.push([0, c.selectionEnd - renderCursorOffset, 'rb', c.direction()]);
+        }
+        if (userSelection.selectionPts.length) {
+          userSelections.push(userSelection);
         }
       }
       // Suggest something to autocomplete if we're in the line and cursor criteria met
       var suggestion = null;
-      if (selectionPts.length && shouldSuggest) {
+      if (
+        userSelections[0] &&
+        userSelections[0].user === this.user &&
+        userSelections[0].selectionPts.length &&
+        shouldSuggest
+      ) {
         suggestion = this.codeCompleter.suggest(line, this.language);
         this._suggestion = suggestion;
+      }
+      // Set line selected state for line number highlighting
+      var lineSelected = (
+        userSelections[0] &&
+        userSelections[0].user === this.user &&
+        userSelections[0].selected
+      );
+      // Set line error as a new cursor
+      if (lineError) {
+        userSelections.push({
+          user: null,
+          color: '#ff0000',
+          selected: true,
+          highlighted: true,
+          selectionPts: [[lineError.column, lineError.column + 1, '', 'ltr']]
+        });
       }
       var lineNumber = (renderStartLineIndex + i + 1);
       var formattedLine = this.format(
         renderCursorOffset,
         lineNumber,
         line,
-        selectionPts,
-        highlighted,
+        userSelections,
         suggestion,
         complements.slice(),
-        lineError,
         (
           this._find.value
             ? this._findRE
@@ -1884,9 +1984,9 @@ CPHEditor.prototype.__render = function (
       if (lineNumber !== lineNumberElements[i].innerHTML) {
         lineNumberElements[i].innerHTML = lineNumber;
       }
-      if (selected && !lineNumberElements[i].classList.contains('selected')) {
+      if (lineSelected && !lineNumberElements[i].classList.contains('selected')) {
         lineNumberElements[i].classList.add('selected');
-      } else if (!selected && lineNumberElements[i].classList.contains('selected')) {
+      } else if (!lineSelected && lineNumberElements[i].classList.contains('selected')) {
         lineNumberElements[i].classList.remove('selected');
       }
       if (lineError) {
@@ -2005,9 +2105,10 @@ CPHEditor.prototype.getActiveFormatter = function () {
 
 CPHEditor.prototype.format = function (
   offset, lineNumber, value,
-  selectionPts, highlighted,
-  suggestion, complements, lineError, findRE
+  userSelections,
+  suggestion, complements, findRE
 ) {
+  var user = this.user;
   // This makes sure we're in a continuous string, and not starting
   //  a new line with a string character
   var inComment = this.inComment(offset) && this.inComment(offset - 1);
@@ -2058,40 +2159,57 @@ CPHEditor.prototype.format = function (
             : ''
         ) +
         (
-          lineError
-            ? ('<div class="line-error">' + safeHTML(line.slice(0, lineError.column)) + '<span class="underline">' + safeHTML((line[lineError.column] || '')) + '</span></div>')
-            : ''
-        ) +
-        (
-          (selectionPts.length || lineError)
-            ? (
-                '<div class="selection">' +
-                selectionPts.reduce(function (acc, pt) {
-                  acc.str = (
-                    acc.str +
-                    '<span class="spacer">' + safeHTML(value.slice(acc.index, pt[0])) + '</span>' +
-                    '<span class="border ' + pt[2] + ' ' + pt[3] + ' length-' + (pt[1] - pt[0]) + '">' +
-                      (pt[2] ? '<div class="focus"></div>' : '') +
-                      safeHTML(value.slice(pt[0], pt[1])) +
-                    '</span>'
-                  );
-                  acc.index = pt[1];
-                  return acc;
-                }, {str: '', index: 0}).str +
-                '</div>'
-              )
-            : ''
-        ) +
-        (
           findRE
             ? ('<div class="find">' + safeHTML(line.replace(findRE, '~~~[~~~$&~~~]~~~')).replace(/~~~\[~~~(.*?)~~~\]~~~/gi, '<span class="found">$1</span>') + '</div>')
             : ''
         ) +
-        (
-          (highlighted || lineError)
-            ? '<div class="line-selection' + (highlighted ? ' highlight' : '') + (lineError ? ' error' : '') + '"></div>'
-            : ''
-        )
+        userSelections.map(function (userSelection) {
+          var otherUser = userSelection.user !== user;
+          return (
+            '<div class="selection">' +
+            userSelection.selectionPts.reduce(function (acc, pt) {
+              acc.str = (
+                acc.str +
+                '<span class="spacer">' + safeHTML(value.slice(acc.index, pt[0])) + '</span>' +
+                '<span ' +
+                  'class="border ' + pt[2] + ' ' + pt[3] + ' length-' + (pt[1] - pt[0]) + ' ' + (otherUser ? 'other-user' : '') + '" ' +
+                  (
+                    userSelection.color
+                      ? 'style="color:' + safeHTML(userSelection.color) + '; background-color:' + safeHTML(userSelection.color + '33') + ';"'
+                      : ''
+                  ) +
+                  '>' +
+                  (
+                    ((pt[2] === 'lb' || pt[2] === 'lb rb') && userSelection.user)
+                      ? (
+                          otherUser
+                            ? '<div class="uuid"><span>' + userSelection.user.username + '</span></div>'
+                            : '<div class="focus"></div>'
+                       )
+                      : ''
+                  ) +
+                  safeHTML(value.slice(pt[0], pt[1])) +
+                '</span>'
+              );
+              acc.index = pt[1];
+              return acc;
+            }, {str: '', index: 0}).str +
+            '</div>' +
+            (
+              (userSelection.highlighted)
+                ? (
+                    '<div class="line-selection highlight" ' +
+                      (
+                        userSelection.color
+                          ? 'style="background-color:' + safeHTML(userSelection.color) + ';" '
+                          : ''
+                      ) +
+                      '></div>'
+                  )
+                : ''
+            )
+          );
+        }).join('')
       )
     ];
     return this._formatCache[lineNumber][1];
@@ -2273,9 +2391,8 @@ CPHEditor.prototype.createCursorStateValue = function (cursors, errorPos) {
  * @param {integer} end The end index to select
  */
 CPHEditor.prototype.select = function (start, end) {
-  this.user.resetCursor();
-  this.user.cursors[0].select(start, end);
-  this.user.cursors[0].clamp(this.value);
+  this.userAction('ResetCursor');
+  this.userAction('Select', start, end);
   this.render(this.value);
 };
 
@@ -2721,6 +2838,7 @@ CPHEditor.prototype.open = function (el, focus, replaceText) {
       lines.pop();
     }
     this.userAction('InsertText', lines.join('\n'));
+    this.userAction('Select', 0, 0);
     this.clearHistory();
   }
   Control.prototype.open.call(this, el, focus);
@@ -2740,4 +2858,19 @@ CPHEditor.prototype.setEmulationMode = function (value) {
     this.element().classList.remove('focus');
   }
   return this._emulationMode = value;
+};
+
+/**
+* Adds a new user session.
+* @param {string} username A unique user identifier. Will default to a random uuid.
+*/
+CPHEditor.prototype.addUser = function (uuid, username, color) {
+  var colors = ['#00cc00', '#9900ff', '#00ff99'];
+  var user = new CPHUser(uuid, username, colors[(this.users.length - 1) % colors.length]);
+  this.users.push(user);
+  return user;
+};
+
+CPHEditor.prototype.syncClients = function () {
+  // TODO: add me
 };

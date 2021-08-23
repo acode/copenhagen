@@ -11,7 +11,6 @@ function isMobile () {
   return !!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-
 function isMac () {
   return !!navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i);
 }
@@ -35,6 +34,12 @@ window['u_btoa'] = function u_btoa (str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (match, p1) {
     return String.fromCharCode(parseInt(p1, 16));
   }));
+}
+
+var uuidv4 = function () {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function (c) {
+    return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16);
+  });
 }
 
 var timeit = function () {

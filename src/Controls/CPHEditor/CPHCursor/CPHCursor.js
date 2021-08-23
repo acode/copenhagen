@@ -3,6 +3,14 @@ function CPHCursor (start, end, offset) {
   this.select(start, end);
 };
 
+CPHCursor.fromObject = function (obj) {
+  return new CPHCursor(obj.start, obj.end, obj.offset);
+};
+
+CPHCursor.prototype.toObject = function () {
+  return {start: this.pivot, end: this.position, offset: this.offset};
+};
+
 CPHCursor.prototype.clone = function () {
   return new CPHCursor(this.pivot, this.position, this.offset);
 };
@@ -32,9 +40,8 @@ CPHCursor.prototype.select = function (start, end) {
   this.selectionEnd = Math.max(this.pivot, this.position);
 };
 
-CPHCursor.prototype.calculateNoOp = function (value) {
+CPHCursor.prototype.calculateNoOp = function () {
   return {
-    value: value,
     selectRelative: [0, 0],
     offset: 0
   };

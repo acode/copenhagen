@@ -1,9 +1,155 @@
-function CPHUser () {
+function CPHUser (uuid, username, color) {
+  this.uuid = uuid || uuidv4();
+  this.username = username || this.uuid;
+  this.color = color || '';
   this.cursors = [new CPHCursor()];
+  this._history = {
+    index: -1,
+    userActions: []
+  };
+};
+
+CPHUser.prototype.gotoHistory = function () {
+  amount = parseInt(amount) || 0;
+  var userActions = this._history.userActions;
+  var historyIndex = this._history.index + Math.sign(amount);
+  // Go back or forward until we hit InsertText or RemoveText
+  while (
+    userActions[historyIndex] &&
+    userActions[historyIndex].arguments[0] !== 'InsertText' &&
+    userActions[historyIndex].arguments[0] !== 'RemoveText'
+  ) {
+    historyIndex = historyIndex + Math.sign(amount);
+  }
+  if (amount < 0 && historyIndex < 0) {
+    // If we hit -1, go to right before the next user text input
+    while (
+      userActions[historyIndex + 1] &&
+      userActions[historyIndex + 1].arguments[0] !== 'InsertText' &&
+      userActions[historyIndex + 1].arguments[0] !== 'RemoveText'
+    ) {
+      historyIndex = historyIndex + 1;
+    }
+  } else if (amount > 0 && historyIndex > userActions.length - 1) {
+    // If we hit the end, go to right after the last user text input
+    while (
+      userActions[historyIndex - 1] &&
+      userActions[historyIndex - 1].arguments[0] !== 'InsertText' &&
+      userActions[historyIndex - 1].arguments[0] !== 'RemoveText'
+    ) {
+      historyIndex = historyIndex - 1;
+    }
+  }
+  historyIndex = Math.max(-1, Math.min(historyIndex, userActions.length - 1));
+  return this._history.index = historyIndex;
+};
+
+CPHUser.prototype.createHistoryUserAction = function (userAction) {
+  this._history.userActions.push(userAction);
+  ++this._history.index;
+  return userAction;
+};
+
+CPHUser.prototype.getHistoryUserActions = function () {
+  return this._history.userActions.slice(0, this._history.index + 1);
+};
+
+CPHUser.prototype.action = function (name, args, lang, value) {
+  if (name === 'NoOp') {
+    return {value: value, ranges: []};
+  } else if (name === 'CollapseCursors') {
+    // If multiple selection ranges overlap
+    this.collapseCursors();
+    return {value: value, ranges: []};
+  } else if (name === 'CreateNextCursor') {
+    this.createNextCursor(value);
+    return {value: value, ranges: []};
+  } else if (name === 'DestroyLastCursor') {
+    this.destroyLastCursor();
+    return {value: value, ranges: []};
+  } if (name === 'CreateCursor') {
+    this.createCursor();
+    return {value: value, ranges: []};
+  } else if (name === 'ResetCursor') {
+    this.resetCursor();
+    return {value: value, ranges: []};
+  } else if (name === 'Select') {
+    this.cursors[0].select(args[0], args[1]);
+    this.cursors[0].clamp(value);
+    return {value: value, ranges: []};
+  } else if (name.startsWith('MoveCursors')) {
+    var actionName = 'moveCursors' + name.slice('MoveCursors'.length);
+    if (!CPHUser.prototype.hasOwnProperty(actionName)) {
+      throw new Error('Invalid user action: "' + actionName + '"');
+    } else {
+      this[actionName].apply(this, [].concat(value, args));
+      return {value: value, ranges: []};
+    }
+  } else {
+    var actionName = 'calculate' + name;
+    if (!CPHCursor.prototype.hasOwnProperty(actionName)) {
+      throw new Error('Invalid user action: "' + name + '"');
+    } else {
+      // We want to only edit the active area for text.
+      // If we're dealing with a huge file (100k LOC),
+      //  there's a huge performance bottleneck on string composition
+      //  so work on the smallest string we need to while we perform a
+      //  large number of cursor operations.
+      var sortedCursors = this.getSortedCursors();
+      var bigCursor = new CPHCursor(sortedCursors[0].selectionStart, sortedCursors[sortedCursors.length - 1].selectionEnd);
+      var bigInfo = bigCursor.getSelectionInformation(value);
+      var linesStartIndex = bigInfo.linesStartIndex;
+      var linesEndIndex = bigInfo.linesEndIndex;
+      if (name === 'RemoveText' && parseInt(args[0]) < 0) { // catch backspaces
+        linesStartIndex += parseInt(args[0]);
+        linesStartIndex = Math.max(0, linesStartIndex);
+      } else if (name === 'InsertText') { // catch complements
+        linesStartIndex -= 1;
+        linesStartIndex = Math.max(0, linesStartIndex);
+      }
+      var startValue = value.slice(0, linesStartIndex);
+      var editValue = value.slice(linesStartIndex, linesEndIndex);
+      var endValue = value.slice(linesEndIndex);
+      var editOffset = linesStartIndex;
+      var offset = -editOffset;
+      var ranges = [];
+      for (var i = 0; i < sortedCursors.length; i++) {
+        var cursor = sortedCursors[i];
+        var range = {
+          selectionStart: cursor.selectionStart,
+          selectionEnd: cursor.selectionEnd,
+          offset: 0
+        };
+        cursor.move(offset);
+        var result;
+        if (name === 'InsertText' && Array.isArray(args[0])) {
+          // Multi-cursor pase
+          result = cursor[actionName](editValue, [args[0][i % args[0].length]], lang);
+        } else {
+          result = cursor[actionName](editValue, args, lang);
+        }
+        editValue = result.value;
+        cursor.move(editOffset);
+        cursor.selectRelative(result.selectRelative[0], result.selectRelative[1]);
+        range.result = result;
+        ranges.push(range);
+        offset += result.offset;
+      }
+      value = startValue + editValue + endValue;
+      this.getSortedCursors().forEach(function (cursor) { cursor.clamp(value); });
+      return {value: value, ranges: ranges};
+    }
+  }
 };
 
 CPHUser.prototype.loadCursors = function (cursors) {
-  this.cursors = cursors.map(function (cursor) { return cursor.clone(); });
+  return this.cursors = cursors.map(function (cursor) {
+    if (cursor instanceof CPHCursor) {
+      return cursor.clone();
+    } else {
+      return CPHCursor.fromObject(cursor);
+    }
+  });
 };
 
 CPHUser.prototype.createCursor = function (position) {

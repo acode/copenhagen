@@ -1,4 +1,4 @@
-$editor-caret-color: saturate(lighten($blue-main, 10%), 100%);
+$editor-caret-color: #6090ff;
 $editor-font-size: $font-size-x-small;
 $editor-line-height: ceil($editor-font-size * 1.5);
 $editor-padding: $size-x-small - 1px;
@@ -9,6 +9,7 @@ $editor-scrollbar-width-active: $size-x-small * 2;
 [control="CPHEditor"] {
 
   text-align: left;
+  font-family: -apple-system, Arial;
 
   * {
     box-sizing: border-box;
@@ -22,10 +23,10 @@ $editor-scrollbar-width-active: $size-x-small * 2;
     100%   { transform: translateX(0px); }
   }
   @keyframes ce-caret-animation {
-    0%   { border-color: $editor-caret-color; }
-    50%  { border-color: $editor-caret-color; }
-    51%  { border-color: transparent; }
-    100% { border-color: transparent; }
+    0%   { opacity: 1.0; }
+    50%  { opacity: 1.0; }
+    51%  { opacity: 0.0; }
+    100% { opacity: 0.0; }
   }
 
   &.animate-no {
@@ -41,7 +42,7 @@ $editor-scrollbar-width-active: $size-x-small * 2;
       background-color: transparent;
     }
     .editor .edit-text div.render div.line div.selection {
-      span.border {
+      span.border:not(.other-user) {
         margin: 0px -1px;
         padding: 0px 1px;
         border-radius: $base-radius;
@@ -420,7 +421,8 @@ $editor-scrollbar-width-active: $size-x-small * 2;
             vertical-align: text-bottom;
           }
           span.border {
-            background-color: darken($blue-x-light, 5%);
+            background-color: transparentize($editor-caret-color, 0.8);
+            color: $editor-caret-color;
             &.lb:before,
             &.rb:after {
               display: block;
@@ -429,7 +431,7 @@ $editor-scrollbar-width-active: $size-x-small * 2;
               top: 0px;
               height: 100%;
               width: 0px;
-              border-left: 2px solid $editor-caret-color;
+              border-left: 2px solid currentColor;
             }
             &.lb:before {
               left: -1px;
@@ -446,9 +448,25 @@ $editor-scrollbar-width-active: $size-x-small * 2;
               top: -2px;
               left: -2px;
               border: 2px solid transparent;
-              border-left-color: $blue-main;
-              border-top-color: $blue-main;
+              border-left-color: currentColor;
+              border-top-color: currentColor;
               transform: rotate(225deg);
+            }
+            .uuid {
+              display: block;
+              position: absolute;
+              font-size: 10px;
+              line-height: 10px;
+              padding: 2px 4px;
+              background-color: currentColor;
+              border-radius: $base-radius;
+              border-bottom-left-radius: 0px;
+              bottom: 100%;
+              left: -1px;
+              z-index: 10;
+              & > span {
+                color: $white;
+              }
             }
             &.rtl {
               &:not(.lb) {
@@ -496,14 +514,12 @@ $editor-scrollbar-width-active: $size-x-small * 2;
           }
         }
         div.line-selection {
+          background-color: $editor-caret-color;
           padding: 0px $editor-padding;
           z-index: 0;
           color: transparent;
           &.highlight {
-            background-color: lighten($blue-x-light, 1%);
-          }
-          &.error {
-            background-color: $red-x-light;
+            opacity: 0.1;
           }
         }
       }

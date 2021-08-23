@@ -1,5 +1,7 @@
 control[control="CPHContextMenu"] {
 
+  font-family: -apple-system, Arial;
+
   position: fixed;
   display: flex;
   flex-direction: column;
@@ -55,6 +57,7 @@ control[control="CPHContextMenu"] {
       display: flex;
       align-items: center;
       padding-right: $size-x-small;
+      font-size: 12px;
       svg {
         color: $color-darken-primary;
         flex-grow: 0;
