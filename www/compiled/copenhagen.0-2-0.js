@@ -2860,7 +2860,7 @@ CPHEditor.prototype.format = function (
             ? '<img src="' + annotation.image + '">'
             : '',
           safeHTML(annotation.text),
-        '</div>',
+        '</a>',
       ].join('');
     }).join('');
   }
