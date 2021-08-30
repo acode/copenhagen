@@ -4270,7 +4270,7 @@ CPHHistory.prototype.updateEntryCacheValue = function (uuid, users, value) {
 CPHHistory.prototype.createEntry = function (users, user, name, args, value) {
   return {
     rev: -1,
-    uuid: uuidv4(),
+    uuid: _unsafe_uuidv4(),
     user_uuid: user ? user.uuid : '',
     cursorMap: users.reduce(function (cursorMap, user) {
       cursorMap[user.uuid] = user.cursors.map(function (cursor) { return cursor.toObject(); });
@@ -4398,7 +4398,7 @@ CPHHistory.prototype.replay = function (user, amount) {
 };
 
 function CPHUser (uuid, username, color) {
-  this.uuid = uuid || uuidv4();
+  this.uuid = uuid || _unsafe_uuidv4();
   this.username = username || this.uuid;
   this.color = color || '';
   this.cursors = [new CPHCursor()];
@@ -4872,7 +4872,7 @@ window['u_btoa'] = function u_btoa (str) {
   }));
 }
 
-var uuidv4 = function () {
+var _unsafe_uuidv4 = function () {
   return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function (c) {
     return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16);
   });

@@ -1,5 +1,5 @@
 function CPHUser (uuid, username, color) {
-  this.uuid = uuid || uuidv4();
+  this.uuid = uuid || _unsafe_uuidv4();
   this.username = username || this.uuid;
   this.color = color || '';
   this.cursors = [new CPHCursor()];

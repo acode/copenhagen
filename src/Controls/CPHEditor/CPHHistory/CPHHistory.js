@@ -42,7 +42,7 @@ CPHHistory.prototype.updateEntryCacheValue = function (uuid, users, value) {
 CPHHistory.prototype.createEntry = function (users, user, name, args, value) {
   return {
     rev: -1,
-    uuid: uuidv4(),
+    uuid: _unsafe_uuidv4(),
     user_uuid: user ? user.uuid : '',
     cursorMap: users.reduce(function (cursorMap, user) {
       cursorMap[user.uuid] = user.cursors.map(function (cursor) { return cursor.toObject(); });
