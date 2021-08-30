@@ -585,13 +585,8 @@ function CPHEditor (app, cfg) {
   this.tabout = cfg.hasOwnProperty('tabout') && cfg.tabout !== false;
   this.nolines = cfg.hasOwnProperty('nolines') && cfg.nolines !== false;
 
-  this._historyIndex = -1;
-  this._history = {
-    initialValue: cfg.value === undefined
-      ? ''
-      : (cfg.value.replace(/\r/gi, '') + ''), // remove carriage returns
-    userActions: []
-  };
+  this.history = new CPHHistory(cfg.value);
+  this.multiplayer = null;
 
   this.language = '';
   this.lineHeight = 0;
@@ -612,12 +607,14 @@ function CPHEditor (app, cfg) {
   this._lastViewportValue = '';
   this._lastScrollValue = '0,0';
   this._lastStateValue = '';
+  this._lastAnnotationsValue = '';
   this._lastValue = '';
   this._maxLine = ''; // max line width
   this._formatCache = {}; // keeps track of formatted lines
-  this.value = this._history.initialValue || '';
+  this._annotations = {}; // track annotations
+  this.value = this.history.initialValue;
 
-  this.users = [new CPHUser()];
+  this.users = [new CPHUser(null, cfg.username)];
   this.user = this.users[0];
 
   this._lastFrameValue = '';
@@ -672,11 +669,13 @@ function CPHEditor (app, cfg) {
   this.nolines && this.element().classList.add('nolines');
 
   this.lineElements = [];
+  this.lineAnnotationElements = [];
   this.lineNumberElements = [];
   this.lineHeight = 0;
   this.lineContainerElement = this.selector('.line-container');
   this.numbersElement = this.selector('.line-numbers');
   this.renderElement = this.selector('.render:not(.sample):not(.limit)');
+  this.annotationsElement = this.selector('.annotations');
   this.inputElement = this.selector('textarea');
   this.textboxElement = this.selector('.edit-text');
   this.verticalScrollAreaElement = this.selector('.scrollbar.vertical');
@@ -731,6 +730,25 @@ function CPHEditor (app, cfg) {
       }
     }.bind(this);
     document.addEventListener('selectionchange', selectionchangeListener);
+  }
+
+  if (window.ResizeObserver) {
+    var resizeObserver = new window.ResizeObserver(function (entries) {
+      this.render(this.value, true);
+    }.bind(this));
+    resizeObserver.observe(this.element());
+  }
+
+  if (window.IntersectionObserver) {
+    var intersectionObserver = new window.IntersectionObserver(function (entries) {
+      // If intersectionRatio is 0, the target is out of view
+      // and we do not need to do anything.
+      if (entries[0].intersectionRatio <= 0) {
+        return;
+      }
+      this.render(this.value, true);
+    }.bind(this));
+    intersectionObserver.observe(this.element());
   }
 
   this._initialized = false;
@@ -910,67 +928,67 @@ CPHEditor.prototype.hotkeys = {
     this.userAction('ToggleComment');
   },
   'ctrl+arrowup': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'up');
+    this.userAction('MoveCursorsByDocument', 'up');
     this.scrollToText();
   },
   'ctrl+arrowdown': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'down');
+    this.userAction('MoveCursorsByDocument', 'down');
     this.scrollToText();
   },
   'ctrl+shift+arrowup': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'up', true);
+    this.userAction('MoveCursorsByDocument', 'up', true);
     this.scrollToText();
   },
   'ctrl+shift+arrowdown': function (value, cursors) {
-    this.user.moveCursorsByDocument(value, 'down', true);
+    this.userAction('MoveCursorsByDocument', 'down', true);
     this.scrollToText();
   },
   'ctrl+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'left');
+    this.userAction('MoveCursorsByLine', 'left');
     this.scrollToText();
   },
   'ctrl+arrowright': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'right');
+    this.userAction('MoveCursorsByLine', 'right');
     this.scrollToText();
   },
   'ctrl+shift+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'left', true);
+    this.userAction('MoveCursorsByLine', 'left', true);
     this.scrollToText();
   },
   'ctrl+shift+arrowright': function (value, cursors) {
-    this.user.moveCursorsByLine(value, 'right', true);
+    this.userAction('MoveCursorsByLine', 'right', true);
     this.scrollToText();
   },
   'alt+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'left');
+    this.userAction('MoveCursorsByWord', 'left');
     this.scrollToText();
   },
   'alt+arrowright': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'right');
+    this.userAction('MoveCursorsByWord', 'right');
     this.scrollToText();
   },
   'alt+shift+arrowleft': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'left', true);
+    this.userAction('MoveCursorsByWord', 'left', true);
     this.scrollToText();
   },
   'alt+shift+arrowright': function (value, cursors) {
-    this.user.moveCursorsByWord(value, 'right', true);
+    this.userAction('MoveCursorsByWord', 'right', true);
     this.scrollToText();
   },
   'ctrl+alt+arrowup': function (value, cursors) {
-    this.user.moveCursors(value, 'up', 1, false, true);
+    this.userAction('MoveCursors', 'up', 1, false, true);
     this.scrollToText();
   },
   'ctrl+alt+arrowdown': function (value, cursors) {
-    this.user.moveCursors(value, 'down', 1, false, true);
+    this.userAction('MoveCursors', 'down', 1, false, true);
     this.scrollToText();
   },
   'ctrl+d': function (value, cursors) {
-    this.user.createNextCursor(value);
+    this.userAction('CreateNextCursor');
     this.scrollToText();
   },
   'ctrl+u': function (value, cursors) {
-    this.user.destroyLastCursor();
+    this.userAction('DestroyLastCursor');
     this.scrollToText();
   },
   'ctrl+c': function (value, cursors) {
@@ -1106,32 +1124,32 @@ CPHEditor.prototype.controlActions = {
     },
     'prev': function (ctrl, value, isCaseSensitive) {
       if (this._find.prevIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.prevIndex, this._find.prevIndex + this._find.prevValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.prevIndex, this._find.prevIndex + this._find.prevValue.length)
         this.scrollToText();
       }
     },
     'next': function (ctrl, value, isCaseSensitive) {
       if (this._find.nextIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.scrollToText();
       }
     },
     'replace': function (ctrl, value, replaceValue, isCaseSensitive) {
       if (this._find.currentIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.currentIndex, this._find.currentIndex + this._find.currentValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.currentIndex, this._find.currentIndex + this._find.currentValue.length);
         this.userAction('InsertText', replaceValue);
         this.__renderFindReplace();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.scrollToText();
       } else if (this._find.nextIndex !== -1) {
-        this.user.resetCursor();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('ResetCursor');
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.userAction('InsertText', replaceValue);
         this.__renderFindReplace();
-        this.user.cursors[0].select(this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
+        this.userAction('Select', this._find.nextIndex, this._find.nextIndex + this._find.nextValue.length);
         this.scrollToText();
       }
     },
@@ -1139,7 +1157,7 @@ CPHEditor.prototype.controlActions = {
       if (this.isReadOnly() || !this.isEnabled()) {
         this.animateNo();
       } else {
-        this.user.resetCursor();
+        this.userAction('ResetCursor');
         this.setValue(this.value.replace(this._findRE, replaceValue));
         this.render(this.value);
       }
@@ -1245,13 +1263,13 @@ CPHEditor.prototype.eventListeners = {
                 icon: 'rotate-ccw',
                 title: 'Undo',
                 shortcut: 'ctrl+z',
-                disabled: this._historyIndex < 0
+                disabled: !this.history.canGoto(this.user, -1)
               },
               {
                 icon: 'rotate-cw',
                 title: 'Redo',
                 shortcut: 'ctrl+y',
-                disabled: this._historyIndex === this._history.userActions.length - 1
+                disabled: !this.history.canGoto(this.user, 1)
               },
               '-',
               {
@@ -1367,6 +1385,9 @@ CPHEditor.prototype.eventListeners = {
     keydown: function capture (e) {
       this._selecting = false;
       this._initialSelection = null;
+      var cursor = this.user.cursors[0];
+      var inString = this.inString(cursor.selectionStart);
+      var inComment = this.inComment(cursor.selectionStart);
       var preventDefaultAndStopPropagation = function () {
         e.preventDefault();
         e.stopPropagation();
@@ -1408,7 +1429,7 @@ CPHEditor.prototype.eventListeners = {
       } else if (key === 'backspace') {
         preventDefaultAndStopPropagation();
         if (e.altKey) {
-          this.user.moveCursorsByWord(this.value, 'left', true);
+          this.userAction('MoveCursorsByWord', 'left', true);
           this.userAction('RemoveText', -1);
           this.scrollToText();
         } else {
@@ -1420,7 +1441,7 @@ CPHEditor.prototype.eventListeners = {
             var nextCharacter = this.value[this.user.cursors[0].selectionStart];
             var prevCharacter = this.value[this.user.cursors[0].selectionStart - 1];
             if (nextCharacter && nextCharacter === lang.forwardComplements[prevCharacter]) {
-              this.user.moveCursors(this.value, 'right');
+              this.userAction('MoveCursors', 'right');
               this.userAction('RemoveText', -2);
               this.scrollToText();
             } else {
@@ -1445,7 +1466,7 @@ CPHEditor.prototype.eventListeners = {
       } else if (key === 'delete') {
         preventDefaultAndStopPropagation();
         if (e.altKey) {
-          this.user.moveCursorsByWord(this.value, 'right', true);
+          this.userAction('MoveCursorsByWord', 'right', true);
           this.userAction('RemoveText', 1);
           this.scrollToText();
         } else {
@@ -1455,7 +1476,7 @@ CPHEditor.prototype.eventListeners = {
       } else if (!isModified && key !== 'shift') {
         if (key === 'escape') {
           preventDefaultAndStopPropagation();
-          this.user.resetCursor();
+          this.userAction('ResetCursor');
           if (this.control('find-replace').isVisible()) {
             this.control('find-replace').hide();
           }
@@ -1497,7 +1518,7 @@ CPHEditor.prototype.eventListeners = {
             } else if (this.user.cursors.length <= 1 && !this.user.cursors[0].width()) {
               if (this._suggestion) {
                 var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
-                this.user.moveCursors(this.value, 'right', selInfo.linesSuffix.length);
+                this.userAction('MoveCursors', 'right', selInfo.linesSuffix.length);
                 this.userAction('InsertText', this._suggestion.value, this._suggestion.adjust, this._suggestion.cursorLength);
               } else {
                 this.userAction('InsertText', lang.tabChar.repeat(lang.tabWidth));
@@ -1518,7 +1539,7 @@ CPHEditor.prototype.eventListeners = {
               this._autocomplete.result
             );
           } else {
-            this.user.moveCursors(this.value, direction, 1, e.shiftKey);
+            this.userAction('MoveCursors', direction, 1, e.shiftKey);
             this.scrollToText();
           }
         } else if (key.startsWith('page')) {
@@ -1526,11 +1547,11 @@ CPHEditor.prototype.eventListeners = {
           this.scrollPage(key.slice('page'.length));
         } else if (key === 'end') {
           preventDefaultAndStopPropagation();
-          this.user.moveCursorsByLine(this.value, 'right');
+          this.userAction('MoveCursorsByLine', 'right');
           this.scrollToText();
         } else if (key === 'home') {
           preventDefaultAndStopPropagation();
-          this.user.moveCursorsByLine(this.value, 'left');
+          this.userAction('MoveCursorsByLine', 'left');
           this.scrollToText();
         } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
           preventDefaultAndStopPropagation();
@@ -1542,14 +1563,15 @@ CPHEditor.prototype.eventListeners = {
         ) {
           preventDefaultAndStopPropagation();
           if (this.value[this.user.cursors[0].selectionStart] === e.key) {
-            this.user.moveCursors(this.value, 'right', 1);
+            this.userAction('MoveCursors', 'right', 1);
           } else {
             this.userAction('InsertText', e.key);
           }
           this.scrollToText();
         } else if (
+          // do not complement strings if already in string or comment
           fwdComplement &&
-          this.value[this.user.cursors[0].selectionStart] !== fwdComplement
+          (!strComplement || (strComplement && (!inString && !inComment)))
         ) {
           preventDefaultAndStopPropagation();
           this.userAction('InsertText', e.key + fwdComplement, -1);
@@ -1634,16 +1656,16 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
 
 CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
   if (createCursor === true) {
-    this.user.createCursor();
+    this.userAction('CreateCursor');
   } else if (createCursor === false) {
-    this.user.resetCursor();
+    this.userAction('ResetCursor');
   }
   var cursor = this.user.cursors[0];
   var selection = {};
   if (mouseup) {
     this._initialSelection = null;
     this._selecting = false;
-    this.user.collapseCursors();
+    this.userAction('CollapseCursors');
     this.__renderSelection();
   } else {
     if (!this._selecting || !this._initialSelection) {
@@ -1662,9 +1684,9 @@ CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
       selection.inputStart = Math.max(1, this.inputElement.selectionStart); // HACK: SelectAll support
       selection.inputEnd = this.inputElement.selectionEnd;
       if (cursor.direction() === 'rtl') {
-        cursor.select(selection.selectionEnd, selection.selectionStart);
+        this.userAction('Select', selection.selectionEnd, selection.selectionStart);
       } else {
-        cursor.select(selection.selectionStart, selection.selectionEnd);
+        this.userAction('Select', selection.selectionStart, selection.selectionEnd);
       }
       this._initialSelection = selection;
     } else if (
@@ -1675,18 +1697,13 @@ CPHEditor.prototype.__cursorEvent = function (e, createCursor, mouseup) {
       selection.ltr = false;
       selection.selectionStart = this.virtualCursorOffset + this.inputElement.selectionStart;
       selection.selectionEnd = this._initialSelection.selectionEnd;
-      selection.inputStart = this.inputElement.selectionStart;
-      selection.inputEnd = this.inputElement.selectionEnd;
-      cursor.select(selection.selectionEnd, selection.selectionStart);
+      this.userAction('Select', selection.selectionEnd, selection.selectionStart);
     } else {
       selection.ltr = true;
       selection.selectionStart = this._initialSelection.selectionStart;
       selection.selectionEnd = this.virtualCursorOffset + this.inputElement.selectionEnd;
-      selection.inputStart = this.inputElement.selectionStart;
-      selection.inputEnd = this.inputElement.selectionEnd;
-      cursor.select(selection.selectionStart, selection.selectionEnd);
+      this.userAction('Select', selection.selectionStart, selection.selectionEnd);
     }
-    cursor.clamp(this.value);
   }
   // HACK: fixScrollTop is for Firefox
   this.fixScrollTop = this.inputElement.scrollTop;
@@ -1757,11 +1774,20 @@ CPHEditor.prototype.getActiveLanguage = function () {
 };
 
 /**
+ * Retrieves the a language dictionary for the editor.
+ * Languages are added via `CPHEditor.prototype.languages`.
+ * @param {string} language The language to retrieve, e.g. javascript. Must be supported in the languages dictionary.
+ */
+CPHEditor.prototype.getLanguageDictionary = function (language) {
+  return this.languages[language] || this.languages['text'];
+};
+
+/**
  * Retrieves the currently active language dictionary for the editor.
  * Languages are added via `CPHEditor.prototype.languages`.
  */
 CPHEditor.prototype.getActiveLanguageDictionary = function () {
-  return this.languages[this.language] || this.languages['text'];
+  return this.getLanguageDictionary(this.language);
 };
 
 /**
@@ -1779,14 +1805,14 @@ CPHEditor.prototype.getValue = function () {
  * @returns {string}
  */
 CPHEditor.prototype.setValue = function (value) {
-  value = value.replace(/\r/gi, ''); // remove carriage returns
-  if (!this._history.userActions.length) {
-    this._history.initialValue = this.value = value;
-    this.render(this.value);
+  value = value.replace(/\r/gi, ''); // remove carriage returns (windows)
+  if (!this.history.pasts.length) {
+    this.render(this.value = this.history.reset(value));
   } else {
     this.userAction('ResetCursor');
     this.userAction('Select', 0, this.value.length);
     this.userAction('InsertText', value);
+    this.userAction('Select', 0, 0);
   }
 };
 
@@ -1806,9 +1832,7 @@ CPHEditor.prototype.save = function () {
  * Clears all user action history. This *does not* re-render the editor.
  */
 CPHEditor.prototype.clearHistory = function () {
-  this._history.userActions = [];
-  this._history.initialValue = this.value;
-  this._historyIndex = -1;
+  this.history.reset(this.value);
 };
 
 /**
@@ -1816,39 +1840,53 @@ CPHEditor.prototype.clearHistory = function () {
  * @param {integer} amount
  */
 CPHEditor.prototype.gotoHistory = function (amount) {
-  amount = parseInt(amount) || 0;
-  var userActions = this._history.userActions;
-  var historyIndex = this._historyIndex;
-  while (userActions[historyIndex] && userActions[historyIndex].arguments[0] === 'NoOp') {
-    historyIndex = historyIndex + Math.sign(amount);
-  }
-  historyIndex = Math.max(-1, Math.min(historyIndex + amount, userActions.length - 1));
-  if (historyIndex !== this._historyIndex) {
-    this._historyIndex = historyIndex;
-    if (this._historyIndex === -1) {
-      if (userActions[0]) {
-        this.user.loadCursors(userActions[0].cursors);
-      } else {
-        this.user.loadCursors([new CPHCursor()]);
-      }
-      return this.render(this.value = this._history.initialValue);
-    } else {
-      this.value = this._history.initialValue;
-      for (var i = this._historyIndex; i > 0; i--) {
-        var userAction = userActions[i];
-        if (userAction.value !== null) {
-          break;
+
+  if (this.history.canGoto(this.user, amount)) {
+
+    var userMap = this.users.reduce(function (users, user) {
+      users[user.uuid] = user;
+      return users;
+    }, {});
+
+    var value;
+    var entries = this.history.back(this.user, Math.min(0, amount));
+    if (entries[0]) {
+      value = entries[0].value;
+      this.users.forEach(function (user) {
+        var cursors = entries[0].cursorMap[user.uuid];
+        if (cursors && cursors.length) {
+          user.loadCursors(cursors);
         }
-      }
-      for (i; i <= this._historyIndex; i++) {
-        var userAction = userActions[i];
-        this.user.loadCursors(userAction.cursors);
-        this.value = this._userAction.apply(this, userAction.arguments.concat(userAction.value, true)); // replay
-      }
-      this.user.getSortedCursors().forEach(function (cursor) { cursor.clamp(this.value); }.bind(this));
-      return this.scrollToText();
+      });
     }
+    for (i = 0; i < entries.length; i++) {
+      var userAction = entries[i];
+      var user = userMap[userAction.user_uuid];
+      value = this._userAction.apply(
+        this,
+        [].concat(user, userAction.name, userAction.args, value, false, userAction.uuid)
+      );
+    }
+
+    if (amount > 0) {
+      var value = this.value;
+      var entries = this.history.replay(this.user, amount);
+      for (i = 0; i < entries.length; i++) {
+        var userAction = entries[i];
+        var user = userMap[userAction.user_uuid];
+        value = this._userAction.apply(
+          this,
+          [].concat(user, userAction.name, userAction.args, value, true)
+        );
+      }
+    }
+
+    this.syncClients();
+
   }
+
+  return this.scrollToText();
+
 };
 
 /**
@@ -1861,14 +1899,42 @@ CPHEditor.prototype.userAction = function (name) {
     this.animateNo();
   } else {
     var args = [].slice.call(arguments, 1);
-    return this._userAction(
+    var result = this._userAction(
+      this.user,
       name,
       args,
-      this.getActiveLanguageDictionary(),
+      this.getActiveLanguage(),
       this.value,
       false
     );
+    this.syncClients();
+    return result;
   }
+};
+
+/**
+ * Perform a user action on behalf of a specific user. Can be used to have
+ * "bot" users that create input secondary to the primary user.
+ * @param {string} name The name of the user action to dispatch
+ */
+CPHEditor.prototype.executeUserAction = function (user, name) {
+  if (!(user instanceof CPHUser)) {
+    throw new Error('Cannot "executeUserAction": User not a valid CPHUser');
+  }
+  if (this.users.indexOf(user) === -1) {
+    throw new Error('Cannot "executeUserAction": User "' + user.uuid + '" not found');
+  }
+  var args = [].slice.call(arguments, 2);
+  var result = this._userAction(
+    user,
+    name,
+    args,
+    this.getActiveLanguage(),
+    this.value,
+    false
+  );
+  this.syncClients();
+  return result;
 };
 
 /**
@@ -1885,77 +1951,105 @@ CPHEditor.prototype.emulateUserAction = function (name) {
     this.animateNo();
   } else {
     var args = [].slice.call(arguments, 1);
-    return this._userAction(
+    var result = this._userAction(
+      this.user,
       name,
       args,
-      this.getActiveLanguageDictionary(),
+      this.getActiveLanguage(),
       this.value,
       false
     );
+    this.syncClients();
+    return result;
   }
 };
 
-CPHEditor.prototype._userAction = function (name, args, lang, value, replay) {
-  value = typeof value === 'string' ? value : null;
+CPHEditor.prototype._userAction = function (user, name, args, lang, value, replay, historyUUID) {
+  value = typeof value === 'string' ? value : this.value;
   args = args.map(function (arg) { return arg === undefined ? null : arg; });
-  lang = lang || this.getActiveLanguageDictionary();
-  var actionName = 'calculate' + name;
-  if (!CPHCursor.prototype.hasOwnProperty(actionName)) {
-    throw new Error('Invalid user action: "' + name + '"');
-  }
-  if (!replay) {
-    this._history.userActions = this._history.userActions.slice(0, this._historyIndex + 1);
-    this._history.userActions.push({
-      value: value,
-      cursors: this.user.cursors.map(function (cursor) { return cursor.clone(); }),
-      arguments: [name, args, lang]
-    });
-    this._historyIndex = this._history.userActions.length - 1;
-  }
-  value = value === null ? this.value : value;
-  // We want to only edit the active area for text.
-  // If we're dealing with a huge file (100k LOC),
-  //  there's a huge performance bottleneck on string composition
-  //  so work on the smallest string we need to while we perform a
-  //  large number of cursor operations.
-  var sortedCursors = this.user.getSortedCursors();
-  var bigCursor = new CPHCursor(sortedCursors[0].selectionStart, sortedCursors[sortedCursors.length - 1].selectionEnd);
-  var bigInfo = bigCursor.getSelectionInformation(value);
-  var linesStartIndex = bigInfo.linesStartIndex;
-  var linesEndIndex = bigInfo.linesEndIndex;
-  if (name === 'RemoveText' && parseInt(args[0]) < 0) { // catch backspaces
-    linesStartIndex += parseInt(args[0]);
-    linesStartIndex = Math.max(0, linesStartIndex);
-  } else if (name === 'InsertText') { // catch complements
-    linesStartIndex -= 1;
-    linesStartIndex = Math.max(0, linesStartIndex);
-  }
-  var startValue = value.slice(0, linesStartIndex);
-  var editValue = value.slice(linesStartIndex, linesEndIndex);
-  var endValue = value.slice(linesEndIndex);
-  var editOffset = linesStartIndex;
-  var offset = -editOffset;
-  for (var i = 0; i < sortedCursors.length; i++) {
-    var cursor = sortedCursors[i];
-    cursor.move(offset);
-    var result;
-    if (name === 'InsertText' && Array.isArray(args[0])) {
-      // Multi-cursor pase
-      result = cursor[actionName](editValue, [args[0][i % args[0].length]], lang);
-    } else {
-      result = cursor[actionName](editValue, args, lang);
+  var historyArguments = [args, lang];
+  if (!historyUUID) {
+    var historyResult = this.history.addEntry(
+      this.history.createEntry(this.users, user, name, historyArguments, value),
+      replay
+    );
+    if (!historyResult) {
+      return value;
     }
-    editValue = result.value;
-    cursor.move(editOffset);
-    cursor.selectRelative(result.selectRelative[0], result.selectRelative[1]);
-    offset += result.offset;
+  } else {
+    this.history.updateEntryCacheValue(historyUUID, this.users, value);
   }
-  value = startValue + editValue + endValue;
-  if (!replay) {
-    this.user.getSortedCursors().forEach(function (cursor) { cursor.clamp(value); });
-    this.render(this.value = value);
+  if (user) {
+    var actionResult = user.action(name, args, this.getLanguageDictionary(lang), value);
+    var adjustCursor = function (c, range) {
+      if (c.selectionStart >= range.selectionEnd) {
+        // cursor after range
+        return [range.result.offset, range.result.offset];
+      } else if (c.selectionStart >= range.selectionStart && c.selectionStart <= range.selectionEnd) {
+        // cursor start within range
+        if (c.selectionEnd <= range.selectionEnd) {
+          // cursor entirely inside of range
+          return [
+            range.selectionStart - c.selectionStart,
+            range.selectionStart - c.selectionEnd + range.result.selectRelative[0]
+          ];
+        }  else {
+          // cursor end outside of range
+          return [
+            range.selectionStart - c.selectionStart,
+            range.result.offset
+          ];
+        }
+      } else if (c.selectionStart < range.selectionStart && c.selectionEnd >= range.selectionStart) {
+        if (c.selectionEnd <= range.selectionEnd) {
+          // cursor start before range, end in range
+          return [
+            0,
+            range.selectionStart - c.selectionEnd + range.result.selectRelative[0]
+          ];
+        } else {
+          // cursor start before range, end after range
+          return [
+            0,
+            range.result.offset
+          ];
+        }
+      } else {
+        return [0, 0];
+      }
+    };
+    this.users
+      .filter(function (u) { return u !== user; })
+      .forEach(function (user) {
+        var cursors = user.cursors;
+        cursors.forEach(function (c) {
+          actionResult.ranges.forEach(function (range) {
+            var sel = adjustCursor(c, range);
+            c.selectRelative(sel[0], sel[1]);
+          });
+          c.clamp(actionResult.value);
+        });
+        user.collapseCursors();
+      });
+    // Fix user selection if you're highlighting stuff
+    if (user !== this.user && this._initialSelection) {
+      if (actionResult.ranges.length) {
+        actionResult.ranges.forEach(function (range) {
+          var sel = adjustCursor(this._initialSelection, range);
+          this._initialSelection.selectionStart += sel[0];
+          this._initialSelection.selectionEnd += sel[1];
+          this._initialSelection.inputStart += sel[0];
+          this._initialSelection.inputEnd += sel[1];
+        }.bind(this));
+        this.inputElement.value = actionResult.value;
+        this.__renderSelection();
+      }
+    }
+    this.render(this.value = actionResult.value);
+    return actionResult.value;
+  } else {
+    return this.value;
   }
-  return value;
 };
 
 /**
@@ -1983,6 +2077,7 @@ CPHEditor.prototype.render = function (value, forceRender) {
         value = this._renderQueue.pop();
         this._renderQueue = [];
         var lastValue = this._lastValue;
+        var annotationsValue = JSON.stringify(this._annotations);
         var findValue = JSON.stringify(this._find) + '/' + (this._findRE ? this._findRE.toString() : '');
         var cursorStateValue = this.createCursorStateValue(this.user.cursors, this._errorPos);
         var scrollValue = [this.inputElement.scrollLeft, Math.max(0, this.inputElement.scrollTop + this.fixScrollTop)].join(',');
@@ -1992,6 +2087,7 @@ CPHEditor.prototype.render = function (value, forceRender) {
         var scrollValueChanged = (scrollValue !== this._lastScrollValue);
         var viewportChanged = (viewportValue !== this._lastViewportValue);
         var findValueChanged = (findValue !== this._lastFindValue);
+        var annotationsValueChanged = (annotationsValue !== this._lastAnnotationsValue);
         var ti = [function () {}, new timeit()][this.debug | 0];
         if (valueChanged) {
           // Tells you whether you're in a comment or a string...
@@ -2025,7 +2121,8 @@ CPHEditor.prototype.render = function (value, forceRender) {
           cursorStateValueChanged ||
           scrollValueChanged ||
           viewportChanged ||
-          findValueChanged
+          findValueChanged ||
+          annotationsValueChanged
         ) {
           this.__render(
             value,
@@ -2033,7 +2130,8 @@ CPHEditor.prototype.render = function (value, forceRender) {
             (cursorStateValueChanged || forceRender),
             scrollValueChanged,
             (viewportChanged || forceRender),
-            findValueChanged
+            findValueChanged,
+            annotationsValueChanged
           );
           ti('render complete!');
         }
@@ -2075,6 +2173,7 @@ CPHEditor.prototype.render = function (value, forceRender) {
         this._lastScrollValue = scrollValue;
         this._lastViewportValue = viewportValue;
         this._lastFindValue = findValue;
+        this._lastAnnotationsValue = annotationsValue;
       }
     }.bind(this));
     return value;
@@ -2195,6 +2294,7 @@ CPHEditor.prototype.__render = function (
   scrollValueChanged,
   viewportChanged,
   findValueChanged,
+  annotationsValueChanged,
   recursive
 ) {
 
@@ -2208,11 +2308,22 @@ CPHEditor.prototype.__render = function (
   }
 
   // Get constants, can grab them on the fly.
-  this.lineHeight = this.sampleLineElement.offsetHeight;
-  this.height = this.textboxElement.offsetHeight;
-  this.width = this.textboxElement.offsetWidth;
+  var lineHeight = this.sampleLineElement.offsetHeight;
+  var height = this.textboxElement.offsetHeight;
+  var width = this.textboxElement.offsetWidth;
   var top = this.virtualTop + this.inputElement.scrollTop;
   var left = this.inputElement.scrollLeft;
+
+  if (!lineHeight || !height) {
+    // If either of these are missing, element not on DOM or initialized properly
+    // Will cascade errors (NaN)
+    return;
+  }
+
+  // Set line height
+  this.lineHeight = lineHeight;
+  this.height = height;
+  this.width = width;
 
   // Determine the visible line count.
   // Also determine where the view is focused (top and bottom)
@@ -2305,6 +2416,7 @@ CPHEditor.prototype.__render = function (
       scrollValueChanged,
       viewportChanged,
       findValueChanged,
+      annotationsValueChanged,
       true
     );
   }
@@ -2324,11 +2436,14 @@ CPHEditor.prototype.__render = function (
   // Usually this is a no-op.
   var lineElements = this.lineElements;
   var lineNumberElements = this.lineNumberElements;
+  var lineAnnotationElements = this.lineAnnotationElements;
   var lineFragment = null;
   var lineNumberFragment = null;
+  var lineAnnotationFragment = null;
   while (lineElements.length < renderLines.length) {
     lineFragment = lineFragment || document.createDocumentFragment();
     lineNumberFragment = lineNumberFragment || document.createDocumentFragment();
+    lineAnnotationFragment = lineAnnotationFragment || document.createDocumentFragment();
     var lineElement = this.create(
       'div',
       ['line'],
@@ -2339,6 +2454,16 @@ CPHEditor.prototype.__render = function (
     );
     lineFragment.appendChild(lineElement);
     lineElements.push(lineElement);
+    var lineAnnotationElement = this.create(
+      'div',
+      ['annotation'],
+      {
+        offset: lineAnnotationElements.length,
+        style: 'top: ' + (lineAnnotationElements.length * this.lineHeight) + 'px'
+      }
+    )
+    lineAnnotationFragment.appendChild(lineAnnotationElement);
+    lineAnnotationElements.push(lineAnnotationElement);
     var lineNumberElement = this.create(
       'div',
       ['number'],
@@ -2351,10 +2476,13 @@ CPHEditor.prototype.__render = function (
     lineNumberElements.push(lineNumberElement);
   }
   lineFragment && this.renderElement.appendChild(lineFragment);
+  lineAnnotationFragment && this.annotationsElement.appendChild(lineAnnotationFragment);
   lineNumberFragment && this.numbersElement.appendChild(lineNumberFragment);
   while (lineElements.length > renderLines.length) {
     var lineElement = lineElements.pop()
     lineElement.parentNode.removeChild(lineElement);
+    var lineAnnotationElement = lineAnnotationElements.pop()
+    lineAnnotationElement.parentNode.removeChild(lineAnnotationElement);
     var lineNumberElement = lineNumberElements.pop()
     lineNumberElement.parentNode.removeChild(lineNumberElement);
   }
@@ -2367,6 +2495,7 @@ CPHEditor.prototype.__render = function (
     cursorStateValueChanged ||
     viewportChanged ||
     findValueChanged ||
+    annotationsValueChanged ||
     this._lastRenderStartLineIndex !== renderStartLineIndex
   ) {
     var renderCursorOffset = renderStartLineIndex
@@ -2391,9 +2520,7 @@ CPHEditor.prototype.__render = function (
     );
     for (var i = 0; i < renderLines.length; i++) {
       var line = renderLines[i];
-      var selectionPts = [];
-      var selected = false;
-      var highlighted = false;
+      var userSelections = [];
       var lineError = (
         (
           !this._autocomplete &&
@@ -2404,59 +2531,100 @@ CPHEditor.prototype.__render = function (
           : null
       );
       // Find selection points in the current line...
-      for (var ci = 0; ci < cursors.length; ci++) {
-        var c = cursors[ci];
-        var unbound = c.selectionStart < renderCursorOffset && c.selectionEnd > renderCursorOffset + line.length;
-        var lbound = c.selectionStart >= renderCursorOffset && c.selectionStart <= renderCursorOffset + line.length;
-        var rbound = c.selectionEnd >= renderCursorOffset && c.selectionEnd <= renderCursorOffset + line.length;
-        if (unbound) {
-          selected = true;
-          selectionPts.push([0, line.length, '', c.direction()]);
-        } else if (lbound && rbound) {
-          selected = true;
-          selectionPts.push([c.selectionStart - renderCursorOffset, c.selectionEnd - renderCursorOffset, 'lb rb', c.direction()]);
-          if (!c.width()) {
-            highlighted = true;
+      for (var ui = this.users.length - 1; ui >= 0; ui--) {
+        var user = this.users[ui];
+        var shouldHighlight = user === this.user;
+        var userCursors = user.collapseCursors(true);
+        var userSelection = {
+          user: user,
+          color: user.color,
+          selected: false,
+          highlighted: false,
+          selectionPts: []
+        };
+        for (var ci = 0; ci < userCursors.length; ci++) {
+          var c = userCursors[ci];
+          var unbound = c.selectionStart < renderCursorOffset && c.selectionEnd > renderCursorOffset + line.length;
+          var lbound = c.selectionStart >= renderCursorOffset && c.selectionStart <= renderCursorOffset + line.length;
+          var rbound = c.selectionEnd >= renderCursorOffset && c.selectionEnd <= renderCursorOffset + line.length;
+          if (unbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([0, line.length, '', c.direction()]);
+          } else if (lbound && rbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([c.selectionStart - renderCursorOffset, c.selectionEnd - renderCursorOffset, 'lb rb', c.direction()]);
+            if (shouldHighlight && !c.width() && userCursors.length === 1) {
+              // Should only highlight the active user's line
+              userSelection.highlighted = true;
+            }
+          } else if (lbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([c.selectionStart - renderCursorOffset, line.length, 'lb', c.direction()]);
+          } else if (rbound) {
+            userSelection.selected = true;
+            userSelection.selectionPts.push([0, c.selectionEnd - renderCursorOffset, 'rb', c.direction()]);
           }
-        } else if (lbound) {
-          selected = true;
-          selectionPts.push([c.selectionStart - renderCursorOffset, line.length, 'lb', c.direction()]);
-        } else if (rbound) {
-          selected = true;
-          selectionPts.push([0, c.selectionEnd - renderCursorOffset, 'rb', c.direction()]);
+        }
+        if (userSelection.selectionPts.length) {
+          userSelections.push(userSelection);
         }
       }
       // Suggest something to autocomplete if we're in the line and cursor criteria met
       var suggestion = null;
-      if (selectionPts.length && shouldSuggest) {
+      if (
+        userSelections[0] &&
+        userSelections[0].user === this.user &&
+        userSelections[0].selectionPts.length &&
+        shouldSuggest
+      ) {
         suggestion = this.codeCompleter.suggest(line, this.language);
         this._suggestion = suggestion;
       }
+      // Set line selected state for line number highlighting
+      var lineSelected = (
+        userSelections[0] &&
+        userSelections[0].user === this.user &&
+        userSelections[0].selected
+      );
+      // Set line error as a new cursor
+      if (lineError) {
+        userSelections.push({
+          user: null,
+          color: '#ff0000',
+          selected: true,
+          highlighted: true,
+          selectionPts: [[lineError.column, lineError.column + 1, '', 'ltr']]
+        });
+      }
       var lineNumber = (renderStartLineIndex + i + 1);
-      var formattedLine = this.format(
+      var formattedLineData = this.format(
         renderCursorOffset,
         lineNumber,
         line,
-        selectionPts,
-        highlighted,
+        userSelections,
         suggestion,
         complements.slice(),
-        lineError,
         (
           this._find.value
             ? this._findRE
             : null
-        )
+        ),
+        this.getAnnotationsAt(lineNumber)
       );
+      var formattedLine = formattedLineData[0];
+      var formattedAnnotation = formattedLineData[1];
       if (formattedLine !== lineElements[i].innerHTML) {
         lineElements[i].innerHTML = formattedLine;
+      }
+      if (formattedAnnotation !== lineAnnotationElements[i].innerHTML) {
+        lineAnnotationElements[i].innerHTML = formattedAnnotation;
       }
       if (lineNumber !== lineNumberElements[i].innerHTML) {
         lineNumberElements[i].innerHTML = lineNumber;
       }
-      if (selected && !lineNumberElements[i].classList.contains('selected')) {
+      if (lineSelected && !lineNumberElements[i].classList.contains('selected')) {
         lineNumberElements[i].classList.add('selected');
-      } else if (!selected && lineNumberElements[i].classList.contains('selected')) {
+      } else if (!lineSelected && lineNumberElements[i].classList.contains('selected')) {
         lineNumberElements[i].classList.remove('selected');
       }
       if (lineError) {
@@ -2519,6 +2687,7 @@ CPHEditor.prototype.__render = function (
     this.renderElement.style.transform = 'translate3d(' + (-(left)) + 'px, ' + (-topOffset) + 'px, 0px)';
     this.limitElement.style.transform = 'translate3d(' + (-(left)) + 'px, 0px, 0px)';
     this.numbersElement.style.transform = 'translate3d(0px, ' + (-topOffset) + 'px, 0px)';
+    this.annotationsElement.style.transform = 'translate3d(0px, ' + (-topOffset) + 'px, 0px)';
     if (left > 0) {
       this.lineContainerElement.classList.add('scrolled-x');
     } else {
@@ -2575,9 +2744,10 @@ CPHEditor.prototype.getActiveFormatter = function () {
 
 CPHEditor.prototype.format = function (
   offset, lineNumber, value,
-  selectionPts, highlighted,
-  suggestion, complements, lineError, findRE
+  userSelections,
+  suggestion, complements, findRE, annotations
 ) {
+  var user = this.user;
   // This makes sure we're in a continuous string, and not starting
   //  a new line with a string character
   var inComment = this.inComment(offset) && this.inComment(offset - 1);
@@ -2589,10 +2759,11 @@ CPHEditor.prototype.format = function (
   if (complements[1] === -1 || complements[1] < offset || complements[1] > offset + value.length) {
     complements.pop();
   }
-  var cacheLine = JSON.stringify([].slice.call(arguments, 1, 8).concat((findRE || '').toString(),inComment, inString));
-  if (this._formatCache[lineNumber] && this._formatCache[lineNumber][0] === cacheLine) {
-    return this._formatCache[lineNumber][1];
-  } else {
+  var cacheLine = JSON.stringify([].slice.call(arguments, 1, 8).concat((findRE || '').toString(), inComment, inString));
+  var cacheAnnotation = JSON.stringify(annotations);
+  this._formatCache[lineNumber] = this._formatCache[lineNumber] || [];
+  var returnArray = [this._formatCache[lineNumber][1], this._formatCache[lineNumber][3]];
+  if (this._formatCache[lineNumber][0] !== cacheLine) {
     var line = value;
     var formatted;
     formatted = this.getActiveFormatter()(line, inString, inComment, inBlock);
@@ -2609,63 +2780,91 @@ CPHEditor.prototype.format = function (
       }
       return complementLine;
     }, {line: '', index: 0}).line;
-    this._formatCache[lineNumber] = [
-      cacheLine,
+    this._formatCache[lineNumber][0] = cacheLine;
+    this._formatCache[lineNumber][1] = returnArray[0] = (
+      '<div class="display">' +
+        formatted.replace(/^(\t| )+/gi, function ($0) {
+          return '<span class="whitespace">' + $0.replace(/\t/gi, '&rarr;&nbsp;').replace(/ /gi, '&middot;') + '</span>';
+        }) +
+        (
+          suggestion
+            ? ('<span class="suggestion">' + safeHTML(suggestion.value.replace(/\t/gi, '&rarr; ')).replace(/ /gi, '&middot;').replace(/\n/gi, '↵') + '</span>')
+            : ''
+        ) +
+      '</div>' +
       (
-        '<div class="display">' +
-          formatted.replace(/^(\t| )+/gi, function ($0) {
-            return '<span class="whitespace">' + $0.replace(/\t/gi, '&rarr;&nbsp;').replace(/ /gi, '&middot;') + '</span>';
-          }) +
+        complementLine
+          ? ('<div class="complement">' + complementLine + '</div>')
+          : ''
+      ) +
+      (
+        findRE
+          ? ('<div class="find">' + safeHTML(line.replace(findRE, '~~~[~~~$&~~~]~~~')).replace(/~~~\[~~~(.*?)~~~\]~~~/gi, '<span class="found">$1</span>') + '</div>')
+          : ''
+      ) +
+      userSelections.map(function (userSelection) {
+        var otherUser = userSelection.user !== user;
+        return (
+          '<div class="selection">' +
+          userSelection.selectionPts.reduce(function (acc, pt) {
+            acc.str = (
+              acc.str +
+              '<span class="spacer">' + safeHTML(value.slice(acc.index, pt[0])) + '</span>' +
+              '<span ' +
+                'class="border ' + pt[2] + ' ' + pt[3] + ' length-' + (pt[1] - pt[0]) + ' ' + (otherUser ? 'other-user' : '') + '" ' +
+                (
+                  userSelection.color
+                    ? 'style="color:' + safeHTML(userSelection.color) + '; background-color:' + safeHTML(userSelection.color + '33') + ';"'
+                    : ''
+                ) +
+                '>' +
+                (
+                  ((pt[2] === 'lb' || pt[2] === 'lb rb') && userSelection.user)
+                    ? (
+                        otherUser
+                          ? '<div class="uuid"><span>' + userSelection.user.username + '</span></div>'
+                          : '<div class="focus"></div>'
+                     )
+                    : ''
+                ) +
+                safeHTML(value.slice(pt[0], pt[1])) +
+              '</span>'
+            );
+            acc.index = pt[1];
+            return acc;
+          }, {str: '', index: 0}).str +
+          '</div>' +
           (
-            suggestion
-              ? ('<span class="suggestion">' + safeHTML(suggestion.value.replace(/\t/gi, '&rarr; ')).replace(/ /gi, '&middot;').replace(/\n/gi, '↵') + '</span>')
+            (userSelection.highlighted)
+              ? (
+                  '<div class="line-selection highlight" ' +
+                    (
+                      userSelection.color
+                        ? 'style="background-color:' + safeHTML(userSelection.color) + ';" '
+                        : ''
+                    ) +
+                    '></div>'
+                )
               : ''
-          ) +
-        '</div>' +
-        (
-          complementLine
-            ? ('<div class="complement">' + complementLine + '</div>')
-            : ''
-        ) +
-        (
-          lineError
-            ? ('<div class="line-error">' + safeHTML(line.slice(0, lineError.column)) + '<span class="underline">' + safeHTML((line[lineError.column] || '')) + '</span></div>')
-            : ''
-        ) +
-        (
-          (selectionPts.length || lineError)
-            ? (
-                '<div class="selection">' +
-                selectionPts.reduce(function (acc, pt) {
-                  acc.str = (
-                    acc.str +
-                    '<span class="spacer">' + safeHTML(value.slice(acc.index, pt[0])) + '</span>' +
-                    '<span class="border ' + pt[2] + ' ' + pt[3] + ' length-' + (pt[1] - pt[0]) + '">' +
-                      (pt[2] ? '<div class="focus"></div>' : '') +
-                      safeHTML(value.slice(pt[0], pt[1])) +
-                    '</span>'
-                  );
-                  acc.index = pt[1];
-                  return acc;
-                }, {str: '', index: 0}).str +
-                '</div>'
-              )
-            : ''
-        ) +
-        (
-          findRE
-            ? ('<div class="find">' + safeHTML(line.replace(findRE, '~~~[~~~$&~~~]~~~')).replace(/~~~\[~~~(.*?)~~~\]~~~/gi, '<span class="found">$1</span>') + '</div>')
-            : ''
-        ) +
-        (
-          (highlighted || lineError)
-            ? '<div class="line-selection' + (highlighted ? ' highlight' : '') + (lineError ? ' error' : '') + '"></div>'
-            : ''
-        )
-      )
-    ];
-    return this._formatCache[lineNumber][1];
+          )
+        );
+      }).join('')
+    );
   }
+  if (this._formatCache[lineNumber][2] !== cacheAnnotation) {
+    this._formatCache[lineNumber][2] = cacheAnnotation;
+    this._formatCache[lineNumber][3] = returnArray[1] = annotations.map(function (annotation) {
+      return [
+        '<a' + (annotation.url ? ' href="' + safeHTML(annotation.url) + '" target="_blank"' : '') + ' class="abody">',
+          annotation.image
+            ? '<img src="' + annotation.image + '">'
+            : '',
+          safeHTML(annotation.text),
+        '</div>',
+      ].join('');
+    }).join('');
+  }
+  return returnArray;
 };
 
 /**
@@ -2704,13 +2903,13 @@ CPHEditor.prototype.scrollToText = function () {
       ? maxLine
       : line
   }, '');
-  this.sampleLineElement.innerHTML = maxLine;
+  this.sampleLineElement.innerHTML = safeHTML(maxLine);
   var width = this.sampleLineElement.offsetWidth;
   var cursorLeftLine = this.value.slice(
     this.value.slice(0, cursor.selectionStart).lastIndexOf('\n') + 1,
     cursor.selectionStart
   );
-  this.sampleLineElement.innerHTML = cursorLeftLine;
+  this.sampleLineElement.innerHTML = safeHTML(cursorLeftLine);
   var leftOffset = this.sampleLineElement.offsetWidth - (this.paddingLeft * 2);
   if (width - this.width > this.inputElement.scrollLeft) {
     this.inputElement.scrollLeft = width - this.width;
@@ -2843,9 +3042,8 @@ CPHEditor.prototype.createCursorStateValue = function (cursors, errorPos) {
  * @param {integer} end The end index to select
  */
 CPHEditor.prototype.select = function (start, end) {
-  this.user.resetCursor();
-  this.user.cursors[0].select(start, end);
-  this.user.cursors[0].clamp(this.value);
+  this.userAction('ResetCursor');
+  this.userAction('Select', start, end);
   this.render(this.value);
 };
 
@@ -2908,16 +3106,16 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
     ),
     'gi'
   );
-  var commentLookup = (
-    value
-      .replace(stringRE, function ($0) {
-        var len = $0.length - 1;
-        var fc = $0[0];
-        var ec = $0[len];
-        return fc.repeat(len) + [fc, ec][(ec === '\n') | 0];
-      })
-      .replace(commentRE, function ($0) { return commentChar.repeat($0.length); })
-  );
+  var commentLookup = value
+    .replace(commentRE, function ($0) {
+      return commentChar.repeat($0.length);
+    })
+    .replace(stringRE, function ($0) {
+      var len = $0.length - 1;
+      var fc = $0[0];
+      var ec = $0[len];
+      return fc.repeat(len) + [fc, ec][(ec === '\n') | 0];
+    });
   this._blockLookup = value.replace(blockRE, function ($0) { return commentChar.repeat($0.length); });
   return this._commentLookup = commentLookup;
 };
@@ -3291,6 +3489,7 @@ CPHEditor.prototype.open = function (el, focus, replaceText) {
       lines.pop();
     }
     this.userAction('InsertText', lines.join('\n'));
+    this.userAction('Select', 0, 0);
     this.clearHistory();
   }
   Control.prototype.open.call(this, el, focus);
@@ -3310,6 +3509,47 @@ CPHEditor.prototype.setEmulationMode = function (value) {
     this.element().classList.remove('focus');
   }
   return this._emulationMode = value;
+};
+
+/**
+* Adds a new user session.
+* @param {string} username A unique user identifier. Will default to a random uuid.
+*/
+CPHEditor.prototype.addUser = function (uuid, username, color) {
+  var colors = ['#00cc00', '#9900ff', '#00ff99'];
+  var user = new CPHUser(uuid, username, colors[(this.users.length - 1) % colors.length]);
+  this.users.push(user);
+  return user;
+};
+
+/**
+* Adds line-by-line annotations
+* @param {array} annotations an array of [lineNumber, {image: '', text: '', url: ''}]
+*/
+CPHEditor.prototype.setAnnotations = function (annotationsArray) {
+  var annotations = {};
+  annotationsArray.forEach(function (a) {
+    var lineNumber = Math.max(parseInt(a[0]) || 0, 1);
+    annotations[lineNumber] = annotations[lineNumber] || [];
+    annotations[lineNumber].push({
+      image: typeof a[1].image === 'string' ? a[1].image : null,
+      text: typeof a[1].text === 'string' ? a[1].text : null,
+      url: typeof a[1].url === 'string' ? a[1].url : null
+    });
+  });
+  return this._annotations = annotations;
+};
+
+/**
+* Retrieve annotations for a specific line number
+* @param {array} annotations an array of {image: '', text: '', url: ''}
+*/
+CPHEditor.prototype.getAnnotationsAt = function (lineNumber) {
+  return (this._annotations[lineNumber] || []).slice();
+};
+
+CPHEditor.prototype.syncClients = function () {
+  // TODO: add me
 };
 
 function CPHContextMenu (app, cfg) {
@@ -3517,6 +3757,14 @@ function CPHCursor (start, end, offset) {
   this.select(start, end);
 };
 
+CPHCursor.fromObject = function (obj) {
+  return new CPHCursor(obj.start, obj.end, obj.offset);
+};
+
+CPHCursor.prototype.toObject = function () {
+  return {start: this.pivot, end: this.position, offset: this.offset};
+};
+
 CPHCursor.prototype.clone = function () {
   return new CPHCursor(this.pivot, this.position, this.offset);
 };
@@ -3546,9 +3794,8 @@ CPHCursor.prototype.select = function (start, end) {
   this.selectionEnd = Math.max(this.pivot, this.position);
 };
 
-CPHCursor.prototype.calculateNoOp = function (value) {
+CPHCursor.prototype.calculateNoOp = function () {
   return {
-    value: value,
     selectRelative: [0, 0],
     offset: 0
   };
@@ -3588,7 +3835,6 @@ CPHCursor.prototype.calculateRemoveText = function (value, args) {
 
 CPHCursor.prototype.calculateInsertText = function (value, args, lang) {
   var insertValue = (args[0] || '') + ''; // coerce to string
-  insertValue = insertValue.replace(/\r/gi, ''); // remove carriage returns
   var selectAll = args[1] === true;
   var adjust = parseInt(args[1]) || 0;
   var cursorLength = parseInt(args[2]) || 0;
@@ -3980,12 +4226,330 @@ CPHFindReplace.prototype.isRegex = function () {
   return this.selector('a[name="regex"]').classList.contains('on');
 };
 
-function CPHUser () {
+function CPHHistory (initialValue) {
+  this.reset(initialValue);
+};
+
+// Can only travel forward / backward in history to these events
+CPHHistory.prototype.gotoEnabled = {
+  'InsertText': true,
+  'RemoveText': true
+};
+
+// Don't store duplicates of this event
+CPHHistory.prototype.deduplicate = {
+  'Select': true
+};
+
+CPHHistory.prototype.reset = function (initialValue) {
+  initialValue = ((initialValue || '') + '').replace(/\r/gi, ''); // remove carriage returns
+  this.initialValue = initialValue;
+  this.acknowledged = {add: -1, remove: -1};
+  this.operations = {add: [], remove: []};
+  this.awaiting = null;
+  this.lookup = {add: {}, remove: {}};
+  this.pasts = {};
+  this.futures = {};
+  this.addEntry(this.createEntry([], null, 'Initialize', [[initialValue], null], initialValue));
+  return this.initialValue;
+};
+
+CPHHistory.prototype.updateEntryCacheValue = function (uuid, users, value) {
+  var entry = this.lookup.add[uuid];
+  if (!entry) {
+    throw new Error('Could not find history entry: ' + uuid);
+  }
+  entry.cursorMap = users.reduce(function (cursorMap, user) {
+    cursorMap[user.uuid] = user.cursors.map(function (cursor) { return cursor.toObject(); });
+    return cursorMap;
+  }, {}),
+  entry.value = value;
+  return entry;
+};
+
+CPHHistory.prototype.createEntry = function (users, user, name, args, value) {
+  return {
+    rev: -1,
+    uuid: uuidv4(),
+    user_uuid: user ? user.uuid : '',
+    cursorMap: users.reduce(function (cursorMap, user) {
+      cursorMap[user.uuid] = user.cursors.map(function (cursor) { return cursor.toObject(); });
+      return cursorMap;
+    }, {}),
+    name: name,
+    args: args,
+    value: value,
+    committed: false
+  };
+};
+
+CPHHistory.prototype.addEntry = function (entry, preserveFutures) {
+  var pasts = this.pasts[entry.user_uuid] = this.pasts[entry.user_uuid] || [];
+  var futures = this.futures[entry.user_uuid] = this.futures[entry.user_uuid] || [];
+  var lastEntry = pasts[pasts.length - 1];
+  if (
+    lastEntry &&
+    this.deduplicate[entry.name] &&
+    entry.name === lastEntry.name &&
+    JSON.stringify(entry.args) === JSON.stringify(lastEntry.args)
+  ) {
+    return;
+  }
+  if (!preserveFutures && this.gotoEnabled[entry.name]) {
+    futures.splice(0, futures.length);
+  }
+  pasts.push(entry);
+  if (this.gotoEnabled[entry.name]) {
+    var i = pasts.length - 1;
+    while (pasts[i] && !pasts[i].committed) {
+      pasts[i].committed = true;
+      i--;
+    }
+  }
+  this.operations.add.push(entry);
+  this.lookup.add[entry.uuid] = entry;
+  return entry.uuid;
+};
+
+CPHHistory.prototype.removeEntry = function (entry) {
+  entry.name = 'NoOp';
+  entry.args = [[], null];
+  delete entry.cursorMap;
+  delete entry.value;
+  this.lookup.remove[entry.uuid] = {
+    rev: -1,
+    uuid: entry.uuid
+  };
+  this.operations.remove.push(this.lookup.remove[entry.uuid]);
+};
+
+CPHHistory.prototype.canGoto = function (user, amount) {
+  var pasts = this.pasts[user.uuid] = this.pasts[user.uuid] || [];
+  var futures = this.futures[user.uuid] = this.futures[user.uuid] || [];
+  return amount >= 0
+    ? futures.length > 0
+    : !!pasts.find(function (past) { return this.gotoEnabled[past.name]; }.bind(this));
+};
+
+CPHHistory.prototype.back = function (user, amount) {
+  if (amount > 0) {
+    throw new Error('CPHHistory#back expects amount to be <= 0');
+  }
+  var pasts = this.pasts[user.uuid] = this.pasts[user.uuid] || [];
+  var futures = this.futures[user.uuid] = this.futures[user.uuid] || [];
+  amount = Math.abs(amount);
+  // First, remove non-indexable entries from the top of the stack
+  while (pasts.length && !pasts[pasts.length - 1].committed) {
+    var entry = pasts.pop();
+    this.removeEntry(entry);
+  }
+  // Now, go back the desired amount
+  var queue = [];
+  while (pasts.length && amount > 0) {
+    var entry = pasts.pop();
+    queue.unshift(entry);
+    if (this.gotoEnabled[entry.name]) {
+      amount--;
+    }
+  }
+  while (queue.length && !this.gotoEnabled[queue[0].name]) {
+    pasts.push(queue.shift());
+  }
+  while (queue.length) {
+    var entry = queue.pop();
+    futures.unshift(entry);
+    this.removeEntry(entry);
+  }
+  return this.generateHistory(pasts.length ? pasts[pasts.length - 1].uuid : null);
+};
+
+CPHHistory.prototype.generateHistory = function (uuid) {
+  var entries = [];
+  var found = uuid ? false : true;
+  for (var i = this.operations.add.length - 1; i >= 0; i--) {
+    var entry = this.operations.add[i];
+    entries.unshift(entry);
+    found = found || (entry.uuid === uuid);
+    if (found && entry.value) {
+      return entries;
+    }
+  }
+  return entries;
+};
+
+CPHHistory.prototype.replay = function (user, amount) {
+  var futures = this.futures[user.uuid] = this.futures[user.uuid] || [];
+  var entries = [];
+  while (amount > 0) {
+    if (!futures.length) {
+      break;
+    } else {
+      var entry = futures.shift();
+      entries.push(entry);
+      if (this.gotoEnabled[entry.name]) {
+        amount--;
+      }
+    }
+  }
+  while (futures.length && !this.gotoEnabled[futures[0].name]) {
+    entries.push(futures.shift());
+  }
+  return entries;
+};
+
+function CPHUser (uuid, username, color) {
+  this.uuid = uuid || uuidv4();
+  this.username = username || this.uuid;
+  this.color = color || '';
   this.cursors = [new CPHCursor()];
+  this._history = {
+    index: -1,
+    userActions: []
+  };
+};
+
+CPHUser.prototype.gotoHistory = function () {
+  amount = parseInt(amount) || 0;
+  var userActions = this._history.userActions;
+  var historyIndex = this._history.index + Math.sign(amount);
+  // Go back or forward until we hit InsertText or RemoveText
+  while (
+    userActions[historyIndex] &&
+    userActions[historyIndex].arguments[0] !== 'InsertText' &&
+    userActions[historyIndex].arguments[0] !== 'RemoveText'
+  ) {
+    historyIndex = historyIndex + Math.sign(amount);
+  }
+  if (amount < 0 && historyIndex < 0) {
+    // If we hit -1, go to right before the next user text input
+    while (
+      userActions[historyIndex + 1] &&
+      userActions[historyIndex + 1].arguments[0] !== 'InsertText' &&
+      userActions[historyIndex + 1].arguments[0] !== 'RemoveText'
+    ) {
+      historyIndex = historyIndex + 1;
+    }
+  } else if (amount > 0 && historyIndex > userActions.length - 1) {
+    // If we hit the end, go to right after the last user text input
+    while (
+      userActions[historyIndex - 1] &&
+      userActions[historyIndex - 1].arguments[0] !== 'InsertText' &&
+      userActions[historyIndex - 1].arguments[0] !== 'RemoveText'
+    ) {
+      historyIndex = historyIndex - 1;
+    }
+  }
+  historyIndex = Math.max(-1, Math.min(historyIndex, userActions.length - 1));
+  return this._history.index = historyIndex;
+};
+
+CPHUser.prototype.createHistoryUserAction = function (userAction) {
+  this._history.userActions.push(userAction);
+  ++this._history.index;
+  return userAction;
+};
+
+CPHUser.prototype.getHistoryUserActions = function () {
+  return this._history.userActions.slice(0, this._history.index + 1);
+};
+
+CPHUser.prototype.action = function (name, args, lang, value) {
+  if (name === 'NoOp') {
+    return {value: value, ranges: []};
+  } else if (name === 'CollapseCursors') {
+    // If multiple selection ranges overlap
+    this.collapseCursors();
+    return {value: value, ranges: []};
+  } else if (name === 'CreateNextCursor') {
+    this.createNextCursor(value);
+    return {value: value, ranges: []};
+  } else if (name === 'DestroyLastCursor') {
+    this.destroyLastCursor();
+    return {value: value, ranges: []};
+  } if (name === 'CreateCursor') {
+    this.createCursor();
+    return {value: value, ranges: []};
+  } else if (name === 'ResetCursor') {
+    this.resetCursor();
+    return {value: value, ranges: []};
+  } else if (name === 'Select') {
+    this.cursors[0].select(args[0], args[1]);
+    this.cursors[0].clamp(value);
+    return {value: value, ranges: []};
+  } else if (name.startsWith('MoveCursors')) {
+    var actionName = 'moveCursors' + name.slice('MoveCursors'.length);
+    if (!CPHUser.prototype.hasOwnProperty(actionName)) {
+      throw new Error('Invalid user action: "' + actionName + '"');
+    } else {
+      this[actionName].apply(this, [].concat(value, args));
+      return {value: value, ranges: []};
+    }
+  } else {
+    var actionName = 'calculate' + name;
+    if (!CPHCursor.prototype.hasOwnProperty(actionName)) {
+      throw new Error('Invalid user action: "' + name + '"');
+    } else {
+      // We want to only edit the active area for text.
+      // If we're dealing with a huge file (100k LOC),
+      //  there's a huge performance bottleneck on string composition
+      //  so work on the smallest string we need to while we perform a
+      //  large number of cursor operations.
+      var sortedCursors = this.getSortedCursors();
+      var bigCursor = new CPHCursor(sortedCursors[0].selectionStart, sortedCursors[sortedCursors.length - 1].selectionEnd);
+      var bigInfo = bigCursor.getSelectionInformation(value);
+      var linesStartIndex = bigInfo.linesStartIndex;
+      var linesEndIndex = bigInfo.linesEndIndex;
+      if (name === 'RemoveText' && parseInt(args[0]) < 0) { // catch backspaces
+        linesStartIndex += parseInt(args[0]);
+        linesStartIndex = Math.max(0, linesStartIndex);
+      } else if (name === 'InsertText') { // catch complements
+        value = value.replace(/\r/gi, ''); // remove carriage returns (windows)
+        linesStartIndex -= 1;
+        linesStartIndex = Math.max(0, linesStartIndex);
+      }
+      var startValue = value.slice(0, linesStartIndex);
+      var editValue = value.slice(linesStartIndex, linesEndIndex);
+      var endValue = value.slice(linesEndIndex);
+      var editOffset = linesStartIndex;
+      var offset = -editOffset;
+      var ranges = [];
+      for (var i = 0; i < sortedCursors.length; i++) {
+        var cursor = sortedCursors[i];
+        var range = {
+          selectionStart: cursor.selectionStart,
+          selectionEnd: cursor.selectionEnd,
+          offset: 0
+        };
+        cursor.move(offset);
+        var result;
+        if (name === 'InsertText' && Array.isArray(args[0])) {
+          // Multi-cursor pase
+          result = cursor[actionName](editValue, [args[0][i % args[0].length]], lang);
+        } else {
+          result = cursor[actionName](editValue, args, lang);
+        }
+        editValue = result.value;
+        cursor.move(editOffset);
+        cursor.selectRelative(result.selectRelative[0], result.selectRelative[1]);
+        range.result = result;
+        ranges.push(range);
+        offset += result.offset;
+      }
+      value = startValue + editValue + endValue;
+      this.getSortedCursors().forEach(function (cursor) { cursor.clamp(value); });
+      return {value: value, ranges: ranges};
+    }
+  }
 };
 
 CPHUser.prototype.loadCursors = function (cursors) {
-  this.cursors = cursors.map(function (cursor) { return cursor.clone(); });
+  return this.cursors = cursors.map(function (cursor) {
+    if (cursor instanceof CPHCursor) {
+      return cursor.clone();
+    } else {
+      return CPHCursor.fromObject(cursor);
+    }
+  });
 };
 
 CPHUser.prototype.createCursor = function (position) {
@@ -4283,7 +4847,6 @@ function isMobile () {
   return !!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-
 function isMac () {
   return !!navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i);
 }
@@ -4307,6 +4870,12 @@ window['u_btoa'] = function u_btoa (str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function (match, p1) {
     return String.fromCharCode(parseInt(p1, 16));
   }));
+}
+
+var uuidv4 = function () {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function (c) {
+    return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16);
+  });
 }
 
 var timeit = function () {
@@ -4601,7 +5170,7 @@ function regexicon () {
 
 Template.add(CPHEditor, function anonymous(it
 ) {
-var out='<div class="editor" ';if(this.debug){out+='data-debug';}out+=' > <control control="CPHFindReplace" name="find-replace"></control> <div class="read-only"> read only <span data-language></span> </div> <div class="line-container"> <div class="line-numbers"></div> </div> <div class="edit-text"> <div class="scrollbar vertical"><div class="scroller"></div></div> <div class="scrollbar horizontal"><div class="scroller"></div></div> <textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" wrap="off" tabIndex="-1"></textarea> <div class="render"></div> <div class="render sample"><div class="line"><span class="fill">x</span></div></div> <div class="render limit"><span class="fill">'+( 'W'.repeat(80) )+'</span></div> </div></div>';return out;
+var out='<div class="editor" ';if(this.debug){out+='data-debug';}out+=' > <control control="CPHFindReplace" name="find-replace"></control> <div class="read-only"> read only <span data-language></span> </div> <div class="line-container"> <div class="line-numbers"></div> </div> <div class="edit-text"> <div class="scrollbar vertical"><div class="scroller"></div></div> <div class="scrollbar horizontal"><div class="scroller"></div></div> <div class="annotations"></div> <textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" wrap="off" tabIndex="-1"></textarea> <div class="render"></div> <div class="render sample"><div class="line"><span class="fill">x</span></div></div> <div class="render limit"><span class="fill">'+( 'W'.repeat(80) )+'</span></div> </div></div>';return out;
 });
 Template.add(CPHContextMenu, function anonymous(it
 ) {

@@ -37,9 +37,11 @@ function CPHEditor (app, cfg) {
   this._lastViewportValue = '';
   this._lastScrollValue = '0,0';
   this._lastStateValue = '';
+  this._lastAnnotationsValue = '';
   this._lastValue = '';
   this._maxLine = ''; // max line width
   this._formatCache = {}; // keeps track of formatted lines
+  this._annotations = {}; // track annotations
   this.value = this.history.initialValue;
 
   this.users = [new CPHUser(null, cfg.username)];
@@ -1372,7 +1374,7 @@ CPHEditor.prototype.executeUserAction = function (user, name) {
  * object, prefixed with the word `calculate`.
  * @param {string} name The name of the user action to dispatch
  */
-CPHEditor.prototype.emulateUserAction = function (user, name) {
+CPHEditor.prototype.emulateUserAction = function (name) {
   if (!this._emulationMode) {
     throw new Error('Can only emulateUserAction in EmulationMode')
   } if (!this.isEnabled()) {
@@ -1505,6 +1507,7 @@ CPHEditor.prototype.render = function (value, forceRender) {
         value = this._renderQueue.pop();
         this._renderQueue = [];
         var lastValue = this._lastValue;
+        var annotationsValue = JSON.stringify(this._annotations);
         var findValue = JSON.stringify(this._find) + '/' + (this._findRE ? this._findRE.toString() : '');
         var cursorStateValue = this.createCursorStateValue(this.user.cursors, this._errorPos);
         var scrollValue = [this.inputElement.scrollLeft, Math.max(0, this.inputElement.scrollTop + this.fixScrollTop)].join(',');
@@ -1514,6 +1517,7 @@ CPHEditor.prototype.render = function (value, forceRender) {
         var scrollValueChanged = (scrollValue !== this._lastScrollValue);
         var viewportChanged = (viewportValue !== this._lastViewportValue);
         var findValueChanged = (findValue !== this._lastFindValue);
+        var annotationsValueChanged = (annotationsValue !== this._lastAnnotationsValue);
         var ti = [function () {}, new timeit()][this.debug | 0];
         if (valueChanged) {
           // Tells you whether you're in a comment or a string...
@@ -1547,7 +1551,8 @@ CPHEditor.prototype.render = function (value, forceRender) {
           cursorStateValueChanged ||
           scrollValueChanged ||
           viewportChanged ||
-          findValueChanged
+          findValueChanged ||
+          annotationsValueChanged
         ) {
           this.__render(
             value,
@@ -1555,7 +1560,8 @@ CPHEditor.prototype.render = function (value, forceRender) {
             (cursorStateValueChanged || forceRender),
             scrollValueChanged,
             (viewportChanged || forceRender),
-            findValueChanged
+            findValueChanged,
+            annotationsValueChanged
           );
           ti('render complete!');
         }
@@ -1597,6 +1603,7 @@ CPHEditor.prototype.render = function (value, forceRender) {
         this._lastScrollValue = scrollValue;
         this._lastViewportValue = viewportValue;
         this._lastFindValue = findValue;
+        this._lastAnnotationsValue = annotationsValue;
       }
     }.bind(this));
     return value;
@@ -1717,6 +1724,7 @@ CPHEditor.prototype.__render = function (
   scrollValueChanged,
   viewportChanged,
   findValueChanged,
+  annotationsValueChanged,
   recursive
 ) {
 
@@ -1838,6 +1846,7 @@ CPHEditor.prototype.__render = function (
       scrollValueChanged,
       viewportChanged,
       findValueChanged,
+      annotationsValueChanged,
       true
     );
   }
@@ -1916,6 +1925,7 @@ CPHEditor.prototype.__render = function (
     cursorStateValueChanged ||
     viewportChanged ||
     findValueChanged ||
+    annotationsValueChanged ||
     this._lastRenderStartLineIndex !== renderStartLineIndex
   ) {
     var renderCursorOffset = renderStartLineIndex

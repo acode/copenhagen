@@ -16,6 +16,7 @@
 
 [control="CPHEditor"] {
   text-align: left;
+  font-family: -apple-system, Arial;
   font-size: 12px;
   position: relative;
   border-radius: 4px;
@@ -41,24 +42,24 @@
 
 @keyframes ce-caret-animation {
   0% {
-    border-color: #4c6eff; }
+    opacity: 1.0; }
   50% {
-    border-color: #4c6eff; }
+    opacity: 1.0; }
   51% {
-    border-color: transparent; }
+    opacity: 0.0; }
   100% {
-    border-color: transparent; } }
+    opacity: 0.0; } }
   [control="CPHEditor"].animate-no {
     animation: ce-animate-no 0.1s linear infinite; }
   [control="CPHEditor"].focus:not(.readonly) {
     border-color: #3556E3; }
   [control="CPHEditor"]:not(.focus) .editor .line-numbers .number.selected:not(.error), [control="CPHEditor"].disabled .editor .line-numbers .number.selected:not(.error) {
     background-color: transparent; }
-  [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border {
+  [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:not(.other-user), [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:not(.other-user) {
     margin: 0px -1px;
     padding: 0px 1px;
     border-radius: 4px; }
-    [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border .focus, [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:before, [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:after, [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border.length-0, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border .focus, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:before, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:after, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border.length-0 {
+    [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:not(.other-user) .focus, [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:not(.other-user):before, [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:not(.other-user):after, [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.selection span.border:not(.other-user).length-0, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:not(.other-user) .focus, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:not(.other-user):before, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:not(.other-user):after, [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.selection span.border:not(.other-user).length-0 {
       display: none; }
   [control="CPHEditor"]:not(.focus) .editor .edit-text div.render div.line div.line-selection.highlight:not(.error), [control="CPHEditor"].disabled .editor .edit-text div.render div.line div.line-selection.highlight:not(.error) {
     background-color: transparent; }
@@ -108,7 +109,7 @@
       height: 100%;
       border-radius: 0px; }
   [control="CPHEditor"].is-mobile .editor textarea {
-    caret-color: #4c6eff !important;
+    caret-color: #6090ff !important;
     opacity: 1; }
   [control="CPHEditor"] .editor {
     overflow: hidden;
@@ -233,6 +234,46 @@
             pointer-events: all; }
           [control="CPHEditor"] .editor .edit-text .scrollbar .scroller.manual {
             pointer-events: all; }
+    [control="CPHEditor"] .editor div.annotations {
+      z-index: 2;
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      overflow: visible;
+      transform: translate3d(0px, 0px, 0px); }
+      [control="CPHEditor"] .editor div.annotations div.annotation {
+        display: none; }
+        [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          position: absolute;
+          overflow: visible;
+          right: 0px;
+          margin-top: 7px;
+          height: 18px; }
+          [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty):hover {
+            z-index: 1; }
+          [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody {
+            font-family: -apple-system, Arial;
+            white-space: nowrap;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-right: 4px;
+            background-color: #FFFFFF;
+            display: flex;
+            align-items: center; }
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody img {
+              width: 12px;
+              height: 12px;
+              margin-right: 8px; }
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:link, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:visited {
+              color: #3556E3;
+              text-decoration: none; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:link:hover, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:visited:hover {
+                text-decoration: underline; }
     [control="CPHEditor"] .editor textarea {
       padding: 7px;
       z-index: 1;
@@ -326,7 +367,8 @@
             height: 100%;
             vertical-align: text-bottom; }
           [control="CPHEditor"] .editor div.render div.line div.selection span.border {
-            background-color: #cdf1ff; }
+            background-color: rgba(96, 144, 255, 0.2);
+            color: #6090ff; }
             [control="CPHEditor"] .editor div.render div.line div.selection span.border.lb:before, [control="CPHEditor"] .editor div.render div.line div.selection span.border.rb:after {
               display: block;
               position: absolute;
@@ -334,7 +376,7 @@
               top: 0px;
               height: 100%;
               width: 0px;
-              border-left: 2px solid #4c6eff; }
+              border-left: 2px solid currentColor; }
             [control="CPHEditor"] .editor div.render div.line div.selection span.border.lb:before {
               left: -1px; }
             [control="CPHEditor"] .editor div.render div.line div.selection span.border.rb:after {
@@ -347,9 +389,23 @@
               top: -2px;
               left: -2px;
               border: 2px solid transparent;
-              border-left-color: #3556E3;
-              border-top-color: #3556E3;
+              border-left-color: currentColor;
+              border-top-color: currentColor;
               transform: rotate(225deg); }
+            [control="CPHEditor"] .editor div.render div.line div.selection span.border .uuid {
+              display: block;
+              position: absolute;
+              font-size: 10px;
+              line-height: 10px;
+              padding: 2px 4px;
+              background-color: currentColor;
+              border-radius: 4px;
+              border-bottom-left-radius: 0px;
+              bottom: 100%;
+              left: -1px;
+              z-index: 10; }
+              [control="CPHEditor"] .editor div.render div.line div.selection span.border .uuid > span {
+                color: #FFFFFF; }
             [control="CPHEditor"] .editor div.render div.line div.selection span.border.rtl:not(.lb) .focus {
               display: none; }
             [control="CPHEditor"] .editor div.render div.line div.selection span.border.ltr:not(.rb) .focus {
@@ -380,13 +436,12 @@
               border: 2px solid #FF9E29;
               margin: 0px -1px; }
         [control="CPHEditor"] .editor div.render div.line div.line-selection {
+          background-color: #6090ff;
           padding: 0px 7px;
           z-index: 0;
           color: transparent; }
           [control="CPHEditor"] .editor div.render div.line div.line-selection.highlight {
-            background-color: #ebf9ff; }
-          [control="CPHEditor"] .editor div.render div.line div.line-selection.error {
-            background-color: #FFF5F4; }
+            opacity: 0.1; }
     [control="CPHEditor"] .editor textarea,
     [control="CPHEditor"] .editor div.render {
       transform: translate3d(0px, 0px, 0px);
@@ -410,6 +465,7 @@
         display: none; }
 
 control[control="CPHContextMenu"] {
+  font-family: -apple-system, Arial;
   position: fixed;
   display: flex;
   flex-direction: column;
@@ -455,7 +511,8 @@ control[control="CPHContextMenu"] {
       flex-grow: 1;
       display: flex;
       align-items: center;
-      padding-right: 8px; }
+      padding-right: 8px;
+      font-size: 12px; }
       control[control="CPHContextMenu"] .item .title svg {
         color: rgba(0, 0, 0, 0.4);
         flex-grow: 0;
@@ -486,6 +543,7 @@ control[control="CPHContextMenu"] {
         height: 8px; }
 
 control[control="CPHFindReplace"] {
+  font-family: -apple-system, Arial;
   position: absolute;
   z-index: 99;
   top: 4px;
@@ -517,7 +575,7 @@ control[control="CPHFindReplace"] {
       outline: none;
       border-radius: 4px;
       padding: 0px 8px;
-      caret-color: #4c6eff; }
+      caret-color: #6090ff; }
       control[control="CPHFindReplace"] div.row input[type="text"]:not(:first-child) {
         margin-left: 4px; }
       control[control="CPHFindReplace"] div.row input[type="text"]::placeholder {
