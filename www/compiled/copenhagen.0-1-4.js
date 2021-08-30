@@ -1779,7 +1779,7 @@ CPHEditor.prototype.getValue = function () {
  * @returns {string}
  */
 CPHEditor.prototype.setValue = function (value) {
-  value = value.replace(/\r/g, ''); // remove carriage returns
+  value = value.replace(/\r/gi, ''); // remove carriage returns
   if (!this._history.userActions.length) {
     this._history.initialValue = this.value = value;
     this.render(this.value);

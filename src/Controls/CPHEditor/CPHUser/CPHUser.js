@@ -104,6 +104,7 @@ CPHUser.prototype.action = function (name, args, lang, value) {
         linesStartIndex += parseInt(args[0]);
         linesStartIndex = Math.max(0, linesStartIndex);
       } else if (name === 'InsertText') { // catch complements
+        value = value.replace(/\r/gi, ''); // remove carriage returns (windows)
         linesStartIndex -= 1;
         linesStartIndex = Math.max(0, linesStartIndex);
       }

@@ -811,6 +811,9 @@ CPHEditor.prototype.eventListeners = {
     keydown: function capture (e) {
       this._selecting = false;
       this._initialSelection = null;
+      var cursor = this.user.cursors[0];
+      var inString = this.inString(cursor.selectionStart);
+      var inComment = this.inComment(cursor.selectionStart);
       var preventDefaultAndStopPropagation = function () {
         e.preventDefault();
         e.stopPropagation();
@@ -992,8 +995,9 @@ CPHEditor.prototype.eventListeners = {
           }
           this.scrollToText();
         } else if (
+          // do not complement strings if already in string or comment
           fwdComplement &&
-          this.value[this.user.cursors[0].selectionStart] !== fwdComplement
+          (!strComplement || (strComplement && (!inString && !inComment)))
         ) {
           preventDefaultAndStopPropagation();
           this.userAction('InsertText', e.key + fwdComplement, -1);
@@ -1227,8 +1231,8 @@ CPHEditor.prototype.getValue = function () {
  * @returns {string}
  */
 CPHEditor.prototype.setValue = function (value) {
-  value = value.replace(/\r/g, ''); // remove carriage returns
-  if (!this.history.list.length) {
+  value = value.replace(/\r/gi, ''); // remove carriage returns (windows)
+  if (!this.history.pasts.length) {
     this.render(this.value = this.history.reset(value));
   } else {
     this.userAction('ResetCursor');
@@ -2485,16 +2489,16 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
     ),
     'gi'
   );
-  var commentLookup = (
-    value
-      .replace(stringRE, function ($0) {
-        var len = $0.length - 1;
-        var fc = $0[0];
-        var ec = $0[len];
-        return fc.repeat(len) + [fc, ec][(ec === '\n') | 0];
-      })
-      .replace(commentRE, function ($0) { return commentChar.repeat($0.length); })
-  );
+  var commentLookup = value
+    .replace(commentRE, function ($0) {
+      return commentChar.repeat($0.length);
+    })
+    .replace(stringRE, function ($0) {
+      var len = $0.length - 1;
+      var fc = $0[0];
+      var ec = $0[len];
+      return fc.repeat(len) + [fc, ec][(ec === '\n') | 0];
+    });
   this._blockLookup = value.replace(blockRE, function ($0) { return commentChar.repeat($0.length); });
   return this._commentLookup = commentLookup;
 };

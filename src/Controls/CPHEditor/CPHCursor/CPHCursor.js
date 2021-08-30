@@ -81,7 +81,6 @@ CPHCursor.prototype.calculateRemoveText = function (value, args) {
 
 CPHCursor.prototype.calculateInsertText = function (value, args, lang) {
   var insertValue = (args[0] || '') + ''; // coerce to string
-  insertValue = insertValue.replace(/\r/gi, ''); // remove carriage returns
   var selectAll = args[1] === true;
   var adjust = parseInt(args[1]) || 0;
   var cursorLength = parseInt(args[2]) || 0;
