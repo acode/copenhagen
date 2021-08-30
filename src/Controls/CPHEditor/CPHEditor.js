@@ -97,11 +97,13 @@ function CPHEditor (app, cfg) {
   this.nolines && this.element().classList.add('nolines');
 
   this.lineElements = [];
+  this.lineAnnotationElements = [];
   this.lineNumberElements = [];
   this.lineHeight = 0;
   this.lineContainerElement = this.selector('.line-container');
   this.numbersElement = this.selector('.line-numbers');
   this.renderElement = this.selector('.render:not(.sample):not(.limit)');
+  this.annotationsElement = this.selector('.annotations');
   this.inputElement = this.selector('textarea');
   this.textboxElement = this.selector('.edit-text');
   this.verticalScrollAreaElement = this.selector('.scrollbar.vertical');
@@ -1855,11 +1857,14 @@ CPHEditor.prototype.__render = function (
   // Usually this is a no-op.
   var lineElements = this.lineElements;
   var lineNumberElements = this.lineNumberElements;
+  var lineAnnotationElements = this.lineAnnotationElements;
   var lineFragment = null;
   var lineNumberFragment = null;
+  var lineAnnotationFragment = null;
   while (lineElements.length < renderLines.length) {
     lineFragment = lineFragment || document.createDocumentFragment();
     lineNumberFragment = lineNumberFragment || document.createDocumentFragment();
+    lineAnnotationFragment = lineAnnotationFragment || document.createDocumentFragment();
     var lineElement = this.create(
       'div',
       ['line'],
@@ -1870,6 +1875,16 @@ CPHEditor.prototype.__render = function (
     );
     lineFragment.appendChild(lineElement);
     lineElements.push(lineElement);
+    var lineAnnotationElement = this.create(
+      'div',
+      ['annotation'],
+      {
+        offset: lineAnnotationElements.length,
+        style: 'top: ' + (lineAnnotationElements.length * this.lineHeight) + 'px'
+      }
+    )
+    lineAnnotationFragment.appendChild(lineAnnotationElement);
+    lineAnnotationElements.push(lineAnnotationElement);
     var lineNumberElement = this.create(
       'div',
       ['number'],
@@ -1882,10 +1897,13 @@ CPHEditor.prototype.__render = function (
     lineNumberElements.push(lineNumberElement);
   }
   lineFragment && this.renderElement.appendChild(lineFragment);
+  lineAnnotationFragment && this.annotationsElement.appendChild(lineAnnotationFragment);
   lineNumberFragment && this.numbersElement.appendChild(lineNumberFragment);
   while (lineElements.length > renderLines.length) {
     var lineElement = lineElements.pop()
     lineElement.parentNode.removeChild(lineElement);
+    var lineAnnotationElement = lineAnnotationElements.pop()
+    lineAnnotationElement.parentNode.removeChild(lineAnnotationElement);
     var lineNumberElement = lineNumberElements.pop()
     lineNumberElement.parentNode.removeChild(lineNumberElement);
   }
@@ -1999,7 +2017,7 @@ CPHEditor.prototype.__render = function (
         });
       }
       var lineNumber = (renderStartLineIndex + i + 1);
-      var formattedLine = this.format(
+      var formattedLineData = this.format(
         renderCursorOffset,
         lineNumber,
         line,
@@ -2010,10 +2028,16 @@ CPHEditor.prototype.__render = function (
           this._find.value
             ? this._findRE
             : null
-        )
+        ),
+        this.getAnnotationsAt(lineNumber)
       );
+      var formattedLine = formattedLineData[0];
+      var formattedAnnotation = formattedLineData[1];
       if (formattedLine !== lineElements[i].innerHTML) {
         lineElements[i].innerHTML = formattedLine;
+      }
+      if (formattedAnnotation !== lineAnnotationElements[i].innerHTML) {
+        lineAnnotationElements[i].innerHTML = formattedAnnotation;
       }
       if (lineNumber !== lineNumberElements[i].innerHTML) {
         lineNumberElements[i].innerHTML = lineNumber;
@@ -2083,6 +2107,7 @@ CPHEditor.prototype.__render = function (
     this.renderElement.style.transform = 'translate3d(' + (-(left)) + 'px, ' + (-topOffset) + 'px, 0px)';
     this.limitElement.style.transform = 'translate3d(' + (-(left)) + 'px, 0px, 0px)';
     this.numbersElement.style.transform = 'translate3d(0px, ' + (-topOffset) + 'px, 0px)';
+    this.annotationsElement.style.transform = 'translate3d(0px, ' + (-topOffset) + 'px, 0px)';
     if (left > 0) {
       this.lineContainerElement.classList.add('scrolled-x');
     } else {
@@ -2140,7 +2165,7 @@ CPHEditor.prototype.getActiveFormatter = function () {
 CPHEditor.prototype.format = function (
   offset, lineNumber, value,
   userSelections,
-  suggestion, complements, findRE
+  suggestion, complements, findRE, annotations
 ) {
   var user = this.user;
   // This makes sure we're in a continuous string, and not starting
@@ -2154,10 +2179,11 @@ CPHEditor.prototype.format = function (
   if (complements[1] === -1 || complements[1] < offset || complements[1] > offset + value.length) {
     complements.pop();
   }
-  var cacheLine = JSON.stringify([].slice.call(arguments, 1, 8).concat((findRE || '').toString(),inComment, inString));
-  if (this._formatCache[lineNumber] && this._formatCache[lineNumber][0] === cacheLine) {
-    return this._formatCache[lineNumber][1];
-  } else {
+  var cacheLine = JSON.stringify([].slice.call(arguments, 1, 8).concat((findRE || '').toString(), inComment, inString));
+  var cacheAnnotation = JSON.stringify(annotations);
+  this._formatCache[lineNumber] = this._formatCache[lineNumber] || [];
+  var returnArray = [this._formatCache[lineNumber][1], this._formatCache[lineNumber][3]];
+  if (this._formatCache[lineNumber][0] !== cacheLine) {
     var line = value;
     var formatted;
     formatted = this.getActiveFormatter()(line, inString, inComment, inBlock);
@@ -2174,80 +2200,91 @@ CPHEditor.prototype.format = function (
       }
       return complementLine;
     }, {line: '', index: 0}).line;
-    this._formatCache[lineNumber] = [
-      cacheLine,
+    this._formatCache[lineNumber][0] = cacheLine;
+    this._formatCache[lineNumber][1] = returnArray[0] = (
+      '<div class="display">' +
+        formatted.replace(/^(\t| )+/gi, function ($0) {
+          return '<span class="whitespace">' + $0.replace(/\t/gi, '&rarr;&nbsp;').replace(/ /gi, '&middot;') + '</span>';
+        }) +
+        (
+          suggestion
+            ? ('<span class="suggestion">' + safeHTML(suggestion.value.replace(/\t/gi, '&rarr; ')).replace(/ /gi, '&middot;').replace(/\n/gi, '↵') + '</span>')
+            : ''
+        ) +
+      '</div>' +
       (
-        '<div class="display">' +
-          formatted.replace(/^(\t| )+/gi, function ($0) {
-            return '<span class="whitespace">' + $0.replace(/\t/gi, '&rarr;&nbsp;').replace(/ /gi, '&middot;') + '</span>';
-          }) +
+        complementLine
+          ? ('<div class="complement">' + complementLine + '</div>')
+          : ''
+      ) +
+      (
+        findRE
+          ? ('<div class="find">' + safeHTML(line.replace(findRE, '~~~[~~~$&~~~]~~~')).replace(/~~~\[~~~(.*?)~~~\]~~~/gi, '<span class="found">$1</span>') + '</div>')
+          : ''
+      ) +
+      userSelections.map(function (userSelection) {
+        var otherUser = userSelection.user !== user;
+        return (
+          '<div class="selection">' +
+          userSelection.selectionPts.reduce(function (acc, pt) {
+            acc.str = (
+              acc.str +
+              '<span class="spacer">' + safeHTML(value.slice(acc.index, pt[0])) + '</span>' +
+              '<span ' +
+                'class="border ' + pt[2] + ' ' + pt[3] + ' length-' + (pt[1] - pt[0]) + ' ' + (otherUser ? 'other-user' : '') + '" ' +
+                (
+                  userSelection.color
+                    ? 'style="color:' + safeHTML(userSelection.color) + '; background-color:' + safeHTML(userSelection.color + '33') + ';"'
+                    : ''
+                ) +
+                '>' +
+                (
+                  ((pt[2] === 'lb' || pt[2] === 'lb rb') && userSelection.user)
+                    ? (
+                        otherUser
+                          ? '<div class="uuid"><span>' + userSelection.user.username + '</span></div>'
+                          : '<div class="focus"></div>'
+                     )
+                    : ''
+                ) +
+                safeHTML(value.slice(pt[0], pt[1])) +
+              '</span>'
+            );
+            acc.index = pt[1];
+            return acc;
+          }, {str: '', index: 0}).str +
+          '</div>' +
           (
-            suggestion
-              ? ('<span class="suggestion">' + safeHTML(suggestion.value.replace(/\t/gi, '&rarr; ')).replace(/ /gi, '&middot;').replace(/\n/gi, '↵') + '</span>')
+            (userSelection.highlighted)
+              ? (
+                  '<div class="line-selection highlight" ' +
+                    (
+                      userSelection.color
+                        ? 'style="background-color:' + safeHTML(userSelection.color) + ';" '
+                        : ''
+                    ) +
+                    '></div>'
+                )
               : ''
-          ) +
-        '</div>' +
-        (
-          complementLine
-            ? ('<div class="complement">' + complementLine + '</div>')
-            : ''
-        ) +
-        (
-          findRE
-            ? ('<div class="find">' + safeHTML(line.replace(findRE, '~~~[~~~$&~~~]~~~')).replace(/~~~\[~~~(.*?)~~~\]~~~/gi, '<span class="found">$1</span>') + '</div>')
-            : ''
-        ) +
-        userSelections.map(function (userSelection) {
-          var otherUser = userSelection.user !== user;
-          return (
-            '<div class="selection">' +
-            userSelection.selectionPts.reduce(function (acc, pt) {
-              acc.str = (
-                acc.str +
-                '<span class="spacer">' + safeHTML(value.slice(acc.index, pt[0])) + '</span>' +
-                '<span ' +
-                  'class="border ' + pt[2] + ' ' + pt[3] + ' length-' + (pt[1] - pt[0]) + ' ' + (otherUser ? 'other-user' : '') + '" ' +
-                  (
-                    userSelection.color
-                      ? 'style="color:' + safeHTML(userSelection.color) + '; background-color:' + safeHTML(userSelection.color + '33') + ';"'
-                      : ''
-                  ) +
-                  '>' +
-                  (
-                    ((pt[2] === 'lb' || pt[2] === 'lb rb') && userSelection.user)
-                      ? (
-                          otherUser
-                            ? '<div class="uuid"><span>' + userSelection.user.username + '</span></div>'
-                            : '<div class="focus"></div>'
-                       )
-                      : ''
-                  ) +
-                  safeHTML(value.slice(pt[0], pt[1])) +
-                '</span>'
-              );
-              acc.index = pt[1];
-              return acc;
-            }, {str: '', index: 0}).str +
-            '</div>' +
-            (
-              (userSelection.highlighted)
-                ? (
-                    '<div class="line-selection highlight" ' +
-                      (
-                        userSelection.color
-                          ? 'style="background-color:' + safeHTML(userSelection.color) + ';" '
-                          : ''
-                      ) +
-                      '></div>'
-                  )
-                : ''
-            )
-          );
-        }).join('')
-      )
-    ];
-    return this._formatCache[lineNumber][1];
+          )
+        );
+      }).join('')
+    );
   }
+  if (this._formatCache[lineNumber][2] !== cacheAnnotation) {
+    this._formatCache[lineNumber][2] = cacheAnnotation;
+    this._formatCache[lineNumber][3] = returnArray[1] = annotations.map(function (annotation) {
+      return [
+        '<a' + (annotation.url ? ' href="' + safeHTML(annotation.url) + '" target="_blank"' : '') + ' class="abody">',
+          annotation.image
+            ? '<img src="' + annotation.image + '">'
+            : '',
+          safeHTML(annotation.text),
+        '</div>',
+      ].join('');
+    }).join('');
+  }
+  return returnArray;
 };
 
 /**
@@ -2903,6 +2940,32 @@ CPHEditor.prototype.addUser = function (uuid, username, color) {
   var user = new CPHUser(uuid, username, colors[(this.users.length - 1) % colors.length]);
   this.users.push(user);
   return user;
+};
+
+/**
+* Adds line-by-line annotations
+* @param {array} annotations an array of [lineNumber, {image: '', text: '', url: ''}]
+*/
+CPHEditor.prototype.setAnnotations = function (annotationsArray) {
+  var annotations = {};
+  annotationsArray.forEach(function (a) {
+    var lineNumber = Math.max(parseInt(a[0]) || 0, 1);
+    annotations[lineNumber] = annotations[lineNumber] || [];
+    annotations[lineNumber].push({
+      image: typeof a[1].image === 'string' ? a[1].image : null,
+      text: typeof a[1].text === 'string' ? a[1].text : null,
+      url: typeof a[1].url === 'string' ? a[1].url : null
+    });
+  });
+  return this._annotations = annotations;
+};
+
+/**
+* Retrieve annotations for a specific line number
+* @param {array} annotations an array of {image: '', text: '', url: ''}
+*/
+CPHEditor.prototype.getAnnotationsAt = function (lineNumber) {
+  return (this._annotations[lineNumber] || []).slice();
 };
 
 CPHEditor.prototype.syncClients = function () {

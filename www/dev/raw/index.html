@@ -10,6 +10,12 @@
         // fetch('./_sample2.txt')
         //   .then(function (response) { return response.text(); })
         //   .then(function (text) { window.editors[0].setValue(text); });
+        window.editors[0].setAnnotations([
+          [1, {text: 'Some line goes here'}],
+          [2, {text: 'Some other line goes here'}],
+          [5, {text: 'some other line', url: 'https://hello.com/'}],
+          [7, {image: 'https://content.public.files.stdlib.com/shared/static/branding/autocode-logo.svg', text: 'link to a thing', url: 'https://hello.com/'}]
+        ]);
       });
     </script>
   </head>
