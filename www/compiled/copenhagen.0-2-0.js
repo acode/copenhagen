@@ -2855,12 +2855,15 @@ CPHEditor.prototype.format = function (
     this._formatCache[lineNumber][2] = cacheAnnotation;
     this._formatCache[lineNumber][3] = returnArray[1] = annotations.map(function (annotation) {
       return [
-        '<a' + (annotation.url ? ' href="' + safeHTML(annotation.url) + '" target="_blank"' : '') + ' class="abody">',
-          annotation.image
-            ? '<img src="' + annotation.image + '">'
-            : '',
-          safeHTML(annotation.text),
-        '</a>',
+        '<div class="abody">',
+          '<span class="icon">',
+            annotation.image
+              ? '<img src="' + annotation.image + '">'
+              : '',
+            feather.icons['more-horizontal'].toSvg(),
+          '</span>',
+          '<a class="text"' + (annotation.url ? ' href="' + safeHTML(annotation.url) + '" target="_blank"' : '') + '>' + safeHTML(annotation.text) + '</a>',
+        '</div>',
       ].join('');
     }).join('');
   }

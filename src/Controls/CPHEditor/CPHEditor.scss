@@ -312,17 +312,15 @@ $editor-scrollbar-width-active: $size-x-small * 2;
         display: none;
         &:not(:empty) {
           display: flex;
-          justify-content: center;
-          align-items: center;
           position: absolute;
           overflow: visible;
           right: 0px;
           margin-top: $editor-padding;
-          height: $editor-line-height;
           &:hover {
             z-index: 1;
           }
-          a.abody {
+          div.abody {
+            cursor: pointer;
             font-family: -apple-system, Arial;
             white-space: nowrap;
             border: 1px solid $color-darken-tertiary;
@@ -333,19 +331,49 @@ $editor-scrollbar-width-active: $size-x-small * 2;
             background-color: $white;
             display: flex;
             align-items: center;
-            img {
-              width: $size-x-small + $half-unit;
-              height: $size-x-small + $half-unit;
-              margin-right: $size-x-small;
-            }
-            &:link, &:visited {
-              color: $blue-main;
-              text-decoration: none;
-              &:hover {
-                text-decoration: underline;
+            span.icon {
+              display: flex;
+              align-items: center;
+              & > img, & > svg {
+                width: $size-x-small + $half-unit;
+                height: $size-x-small + $half-unit;
+                margin-right: $size-x-small;
+              }
+              & > svg {
+                opacity: 0.3;
+                display: none;
               }
             }
-            // what
+            a.text {
+              &:link, &:visited {
+                color: $blue-main;
+                text-decoration: none;
+                &:hover {
+                  text-decoration: underline;
+                }
+              }
+            }
+          }
+          @media screen and (max-width: $tablet-width) {
+            div.abody {
+              flex-direction: column;
+              align-items: flex-end;
+              span.icon {
+                margin-right: -$size-x-small;
+                & > svg {
+                  display: flex;
+                }
+              }
+              a.text {
+                display: none;
+              }
+              &:hover {
+                a.text {
+                  margin-top: $half-unit;
+                  display: block;
+                }
+              }
+            }
           }
         }
       }

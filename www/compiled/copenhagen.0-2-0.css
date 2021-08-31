@@ -245,16 +245,14 @@
         display: none; }
         [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) {
           display: flex;
-          justify-content: center;
-          align-items: center;
           position: absolute;
           overflow: visible;
           right: 0px;
-          margin-top: 7px;
-          height: 18px; }
+          margin-top: 7px; }
           [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty):hover {
             z-index: 1; }
-          [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody {
+          [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody {
+            cursor: pointer;
             font-family: -apple-system, Arial;
             white-space: nowrap;
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -265,15 +263,34 @@
             background-color: #FFFFFF;
             display: flex;
             align-items: center; }
-            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody img {
-              width: 12px;
-              height: 12px;
-              margin-right: 8px; }
-            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:link, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:visited {
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon {
+              display: flex;
+              align-items: center; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > img, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > svg {
+                width: 12px;
+                height: 12px;
+                margin-right: 8px; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > svg {
+                opacity: 0.3;
+                display: none; }
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:link, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:visited {
               color: #3556E3;
               text-decoration: none; }
-              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:link:hover, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) a.abody:visited:hover {
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:link:hover, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:visited:hover {
                 text-decoration: underline; }
+          @media screen and (max-width: 768px) {
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody {
+              flex-direction: column;
+              align-items: flex-end; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon {
+                margin-right: -8px; }
+                [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > svg {
+                  display: flex; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text {
+                display: none; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody:hover a.text {
+                margin-top: 4px;
+                display: block; } }
     [control="CPHEditor"] .editor textarea {
       padding: 7px;
       z-index: 1;
