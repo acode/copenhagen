@@ -4326,6 +4326,14 @@ CPHHistory.prototype.removeEntry = function (entry) {
   this.operations.remove.push(this.lookup.remove[entry.uuid]);
 };
 
+CPHHistory.prototype.createFutureEntry = function (entry) {
+  return {
+    user_uuid: entry.user_uuid,
+    name: entry.name,
+    args: entry.args
+  };
+};
+
 CPHHistory.prototype.canGoto = function (user, amount) {
   var pasts = this.pasts[user.uuid] = this.pasts[user.uuid] || [];
   var futures = this.futures[user.uuid] = this.futures[user.uuid] || [];
@@ -4360,7 +4368,7 @@ CPHHistory.prototype.back = function (user, amount) {
   }
   while (queue.length) {
     var entry = queue.pop();
-    futures.unshift(entry);
+    futures.unshift(this.createFutureEntry(entry));
     this.removeEntry(entry);
   }
   return this.generateHistory(pasts.length ? pasts[pasts.length - 1].uuid : null);
