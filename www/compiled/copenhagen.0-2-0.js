@@ -1895,7 +1895,9 @@ CPHEditor.prototype.gotoHistory = function (amount) {
  * @param {string} name The name of the user action to dispatch
  */
 CPHEditor.prototype.userAction = function (name) {
-  if (this.isReadOnly() || !this.isEnabled()) {
+  if (!this.isEnabled()) {
+    this.animateNo();
+  } else if (this.isReadOnly() && !name.match(/^(NoOp|Select|ResetCursor|CollapseCursors|Move*)$/)) {
     this.animateNo();
   } else {
     var args = [].slice.call(arguments, 1);
