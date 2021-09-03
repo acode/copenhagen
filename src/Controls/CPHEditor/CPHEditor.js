@@ -2542,14 +2542,14 @@ CPHEditor.prototype.__populateStringLookup = function (callback) {
     'gi'
   );
   var commentLookup = value
-    .replace(commentRE, function ($0) {
-      return commentChar.repeat($0.length);
-    })
     .replace(stringRE, function ($0) {
       var len = $0.length - 1;
       var fc = $0[0];
       var ec = $0[len];
       return fc.repeat(len) + [fc, ec][(ec === '\n') | 0];
+    })
+    .replace(commentRE, function ($0) {
+      return commentChar.repeat($0.length);
     });
   this._blockLookup = value.replace(blockRE, function ($0) { return commentChar.repeat($0.length); });
   return this._commentLookup = commentLookup;
