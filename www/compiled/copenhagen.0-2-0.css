@@ -262,35 +262,29 @@
             margin-right: 4px;
             background-color: #FFFFFF;
             display: flex;
-            align-items: center; }
+            flex-direction: column;
+            align-items: flex-end; }
             [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon {
               display: flex;
-              align-items: center; }
+              align-items: center;
+              margin-right: -8px; }
               [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > img, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > svg {
                 width: 12px;
                 height: 12px;
                 margin-right: 8px; }
               [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > svg {
-                opacity: 0.3;
-                display: none; }
-            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:link, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:visited {
-              color: #3556E3;
-              text-decoration: none; }
-              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:link:hover, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:visited:hover {
-                text-decoration: underline; }
-          @media screen and (max-width: 768px) {
-            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody {
-              flex-direction: column;
-              align-items: flex-end; }
-              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon {
-                margin-right: -8px; }
-                [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody span.icon > svg {
-                  display: flex; }
-              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text {
-                display: none; }
-              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody:hover a.text {
-                margin-top: 4px;
-                display: block; } }
+                opacity: 0.6; }
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text {
+              display: none;
+              padding: 4px 0px; }
+              [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:link, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:visited {
+                color: #3556E3;
+                text-decoration: none; }
+                [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:link:hover, [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody a.text:visited:hover {
+                  text-decoration: underline; }
+            [control="CPHEditor"] .editor div.annotations div.annotation:not(:empty) div.abody:hover a.text {
+              margin-top: 4px;
+              display: block; }
     [control="CPHEditor"] .editor textarea {
       padding: 7px;
       z-index: 1;
