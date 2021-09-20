@@ -681,6 +681,19 @@ CPHEditor.prototype.eventListeners = {
       this.render(this.value);
     },
     contextmenu: function capture (e) {
+      if (this.canGotoHistory(-1)) {
+        this._inputDisabled = true;
+        document.execCommand('insertText', false, String.fromCharCode(0));
+        this._inputDisabled = false;
+      }
+      if (this.canGotoHistory(1)) {
+        this._inputDisabled = true;
+        document.execCommand('insertText', false, String.fromCharCode(0));
+        document.execCommand('undo', false, null);
+        this._inputDisabled = false;
+      }
+      return;
+      // TODO: Deprecated. Use browser native context window.
       this.dispatch('contextmenu', this, e);
       if (!e.defaultPrevented) {
         e.preventDefault();
@@ -765,17 +778,24 @@ CPHEditor.prototype.eventListeners = {
       }
     },
     input: function (e) {
-      var text = e.data;
-      var type = e.inputType;
-      if (type === 'insertText') {
-        this.userAction('InsertText', text);
-        this.scrollToText();
-      } else if (type === 'historyUndo') {
-        this.gotoHistory(-1);
-      } else if (type === 'historyRedo') {
-        this.gotoHistory(1);
+      e.preventDefault();
+      if (this._inputDisabled) {
+        return;
       } else {
-        this.render(this.value);
+        var text = e.data;
+        var type = e.inputType;
+        if (type === 'insertText') {
+          this.userAction('InsertText', text);
+          this.scrollToText();
+        } else if (type === 'historyUndo') {
+          e.preventDefault();
+          this.gotoHistory(-1);
+        } else if (type === 'historyRedo') {
+          e.preventDefault();
+          this.gotoHistory(1);
+        } else {
+          this.render(this.value);
+        }
       }
     },
     cut: function (e) {
@@ -1263,6 +1283,14 @@ CPHEditor.prototype.save = function () {
  */
 CPHEditor.prototype.clearHistory = function () {
   this.history.reset(this.value);
+};
+
+/**
+ * Check if user can go to history, forward or backward.
+ * @param {integer} amount
+ */
+CPHEditor.prototype.canGotoHistory = function (amount) {
+  return this.history.canGoto(this.user, amount);
 };
 
 /**
