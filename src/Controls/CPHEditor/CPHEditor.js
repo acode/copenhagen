@@ -788,10 +788,8 @@ CPHEditor.prototype.eventListeners = {
           this.userAction('InsertText', text);
           this.scrollToText();
         } else if (type === 'historyUndo') {
-          e.preventDefault();
           this.gotoHistory(-1);
         } else if (type === 'historyRedo') {
-          e.preventDefault();
           this.gotoHistory(1);
         } else {
           this.render(this.value);
