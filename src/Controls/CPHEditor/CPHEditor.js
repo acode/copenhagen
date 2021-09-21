@@ -25,11 +25,12 @@ function CPHEditor (app, cfg) {
 
   this._inputDelay = 500;
   this._inputDelayTimeout = null;
+  this._inputDisabled = false;
 
   this._contextMenu = null;
 
   this._preventMobileSelection = false;
-  // FUTURE: Better mobile controls
+  // TODO: FUTURE: Better mobile controls
   this._mobileTabDelay = 300;
   this._mobileTabTimeout = null;
 
