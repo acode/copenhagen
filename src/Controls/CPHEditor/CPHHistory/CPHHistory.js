@@ -14,7 +14,7 @@ CPHHistory.prototype.deduplicate = {
 };
 
 CPHHistory.prototype.reset = function (initialValue) {
-  initialValue = ((initialValue || '') + '').replace(/\r/gi, ''); // remove carriage returns
+  initialValue = ((initialValue || '') + '').replace(/\r/gi, ''); // remove carriage returns (windows)
   this.initialValue = initialValue;
   this.acknowledged = {add: -1, remove: -1};
   this.operations = {add: [], remove: []};
