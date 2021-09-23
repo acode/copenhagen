@@ -1,16 +1,16 @@
 <html>
   <head>
     <title>CPH Playground: Raw</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <link rel="stylesheet" href="../../compile/?filename=style.css">
     <script src="../../compile/?filename=script.js"></script>
     <script src="../../main.js"></script>
     <script>
       window.addEventListener('DOMContentLoaded', function () {
         // Set custom code. Files saved as _sample*.txt won't be checked into VC.
-        fetch('./_sample2.txt')
-          .then(function (response) { return response.text(); })
-          .then(function (text) { window.editors[0].setValue(text.replace(/\n/gi, '\r\n')); });
+        // fetch('./_sample2.txt')
+        //   .then(function (response) { return response.text(); })
+        //   .then(function (text) { window.editors[0].setValue(text.replace(/\n/gi, '\r\n')); });
         window.editors[0].setAnnotations([
           [1, {text: 'Some line goes here'}],
           [2, {text: 'Some other line goes here'}],
@@ -22,7 +22,7 @@
     </script>
   </head>
   <body>
-    <div class="editor" data-language="javascript" data-debug="true">
+    <div class="editor" data-language="javascript">
       // This page uses the raw Copenhagen source compiled from
       // the `src` directory. It's recommend you use this as your primary
       // test playground.

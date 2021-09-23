@@ -1,6 +1,4 @@
-<div class="editor"
-  {{? this.debug }}data-debug{{?}}
-  >
+<div class="editor">
   <control control="CPHFindReplace" name="find-replace"></control>
   <div class="read-only">
     read only <span data-language></span>
@@ -16,8 +14,9 @@
       spellcheck="false"
       autocomplete="off"
       autocorrect="off"
-      autocapitalize="off"
+      autocapitalize="none"
       wrap="off"
+      inputmode="text"
       tabIndex="-1"></textarea>
     <div class="render"></div>
     <div class="render sample"><div class="line"><span class="fill">x</span></div></div>
@@ -25,38 +24,44 @@
   </div>
 </div>
 <div class="mobile-menu">
-  <button class="main" name="cph-keypress" data-key="tab">tab</button>
-  <div class="scrollable">
-    <button name="cph-keypress">(</button>
-    <button name="cph-keypress">)</button>
-    <button name="cph-keypress">{</button>
-    <button name="cph-keypress">}</button>
-    <button name="cph-keypress">[</button>
-    <button name="cph-keypress">]</button>
-    <button name="cph-keypress">'</button>
-    <button name="cph-keypress" data-key="quotation-mark">&quot;</button>
-    <button name="cph-keypress">`</button>
-    <button name="cph-keypress">!</button>
-    <button name="cph-keypress">?</button>
-    <button name="cph-keypress">|</button>
-    <button name="cph-keypress">&</button>
-    <button name="cph-keypress">=</button>
-    <button name="cph-keypress">:</button>
-    <button name="cph-keypress">/</button>
-    <button name="cph-keypress">*</button>
-    <button name="cph-keypress">%</button>
-    <button name="cph-keypress">\</button>
-    <button name="cph-keypress" data-key="<">&lt;</button>
-    <button name="cph-keypress" data-key=">">&gt;</button>
-    <button name="cph-keypress">+</button>
-    <button name="cph-keypress">-</button>
-    <button name="cph-keypress">_</button>
-    <button name="cph-keypress">^</button>
-    <button name="cph-keypress">~</button>
-    <button name="cph-keypress">#</button>
-    <button name="cph-keypress">@</button>
-    <button name="cph-keypress">$</button>
+  <div class="menu-row">
+    <button class="main pad" name="cph-keypress" data-key="tab">tab</button>
+    <div class="scrollable">
+      <button name="cph-keypress">(</button>
+      <button name="cph-keypress">{</button>
+      <button name="cph-keypress">[</button>
+      <button name="cph-keypress">`</button>
+      <button name="cph-keypress">$</button>
+      <button name="cph-keypress">'</button>
+      <button name="cph-keypress" data-key="quotation-mark">&quot;</button>
+      <button name="cph-keypress">!</button>
+      <button name="cph-keypress">?</button>
+      <button name="cph-keypress">|</button>
+      <button name="cph-keypress">&</button>
+      <button name="cph-keypress">=</button>
+      <button name="cph-keypress">:</button>
+      <button name="cph-keypress" data-key="<">&lt;</button>
+      <button name="cph-keypress" data-key=">">&gt;</button>
+      <button name="cph-keypress">/</button>
+      <button name="cph-keypress">*</button>
+      <button name="cph-keypress">%</button>
+      <button name="cph-keypress">\</button>
+      <button name="cph-keypress">+</button>
+      <button name="cph-keypress">-</button>
+      <button name="cph-keypress">_</button>
+      <button name="cph-keypress">)</button>
+      <button name="cph-keypress">}</button>
+      <button name="cph-keypress">]</button>
+      <button name="cph-keypress">^</button>
+      <button name="cph-keypress">~</button>
+      <button name="cph-keypress">#</button>
+      <button name="cph-keypress">@</button>
+      <button class="pad" name="cph-keypress" data-key="untab">untab</button>
+      <button class="pad" name="cph-keypress" data-key="comment">//</button>
+      <button class="pad" name="cph-undo">{{= feather.icons['rotate-ccw'].toSvg() }}&nbsp;undo</button>
+      <button class="pad" name="cph-redo">{{= feather.icons['rotate-cw'].toSvg() }}&nbsp;redo</button>
+    </div>
+    <button class="main" name="cph-keypress" data-key="arrowleft">{{= feather.icons['arrow-left'].toSvg() }}</button>
+    <button class="main" name="cph-keypress" data-key="arrowright">{{= feather.icons['arrow-right'].toSvg() }}</button>
   </div>
-  <button class="main" name="cph-undo">undo</button>
-  <button class="main" name="cph-redo">redo</button>
 </div>

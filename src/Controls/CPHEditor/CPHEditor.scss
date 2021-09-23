@@ -141,14 +141,8 @@ $editor-scrollbar-width-active: $size-x-small * 2;
     }
   }
 
-  .editor {
-    overflow: hidden;
-    transform: translate3d(0px, 0px, 0px);
-    display: flex;
-    position: relative;
-    background-color: $white;
-    border-radius: $base-radius;
-    &[data-debug] {
+  &.debug {
+    .editor {
       textarea {
         opacity: 1;
         color: transparentize($red-main, 0.5);
@@ -158,6 +152,15 @@ $editor-scrollbar-width-active: $size-x-small * 2;
         }
       }
     }
+  }
+
+  .editor {
+    overflow: hidden;
+    transform: translate3d(0px, 0px, 0px);
+    display: flex;
+    position: relative;
+    background-color: $white;
+    border-radius: $base-radius;
     .line-container {
       border-top-left-radius: $base-radius;
       border-bottom-left-radius: $base-radius;
@@ -610,15 +613,18 @@ $editor-scrollbar-width-active: $size-x-small * 2;
 
   div.mobile-menu {
     display: none;
+    flex-direction: column;
     position: fixed;
     bottom: 0px;
     left: 0px;
     width: 100%;
-    border-top: 1px solid $color-darken-tertiary;
-    border-bottom: 1px solid $color-darken-tertiary;
+    border-top: 1px solid $grey-light;
     background-color: $grey-xx-light;
-    align-items: center;
-    justify-content: flex-end;
+    div.menu-row {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid $grey-light;
+    }
     div.scrollable {
       display: flex;
       align-items: center;
@@ -627,14 +633,22 @@ $editor-scrollbar-width-active: $size-x-small * 2;
       overflow: auto;
       scrollbar-width: none;
       &::-webkit-scrollbar { display: none; }
-      border-left: 1px solid $color-darken-tertiary;
+      border-left: 1px solid $grey-light;
+    }
+    div.spacer {
+      flex-grow: 1;
+      border-left: 1px solid $grey-light;
+      height: $editor-line-height * 3;
     }
     button {
       @include monospace-font();
+      cursor: pointer;
+      margin: 0px;
+      padding: 0px;
       flex-shrink: 0;
       color: $grey-xx-dark;
       font-size: $editor-font-size;
-      height: $editor-line-height * 2;
+      height: $editor-line-height * 3;
       min-width: $editor-line-height * 2;
       outline: none;
       display: flex;
@@ -643,12 +657,18 @@ $editor-scrollbar-width-active: $size-x-small * 2;
       border: 0px;
       background-color: transparent;
       border-radius: 0px;
+      svg {
+        width: $size-x-small + $half-unit;
+        height: $size-x-small + $half-unit;
+      }
       &.main {
         background-color: $grey-x-light;
+      }
+      &.pad {
         padding: 0px $size-small;
       }
       &:not(:first-child) {
-        border-left: 1px solid $color-darken-tertiary;
+        border-left: 1px solid $grey-light;
       }
       &:active {
         color: $white;
@@ -657,10 +677,10 @@ $editor-scrollbar-width-active: $size-x-small * 2;
     }
   }
 
-  // &.is-mobile {
+  &.mobile-keyboard {
     div.mobile-menu {
       display: flex;
     }
-  // }
+  }
 
 }

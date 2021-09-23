@@ -5,7 +5,11 @@ function CPHHistory (initialValue) {
 // Can only travel forward / backward in history to these events
 CPHHistory.prototype.gotoEnabled = {
   'InsertText': true,
-  'RemoveText': true
+  'RemoveText': true,
+  'InsertLines': true,
+  'AddIndent': true,
+  'RemoveIndent': true,
+  'ToggleComment': true
 };
 
 // Don't store duplicates of this event

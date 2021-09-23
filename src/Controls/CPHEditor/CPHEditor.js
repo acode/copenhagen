@@ -34,6 +34,8 @@ function CPHEditor (app, cfg) {
   // TODO: FUTURE: Better mobile controls
   this._mobileTabDelay = 300;
   this._mobileTabTimeout = null;
+  this._mobileTopBarHeight = screen.height - window.innerHeight;
+  this._mobileKeyboardHeight = 0;
 
   this._lastFindValue = null;
   this._lastViewportValue = '';
@@ -98,6 +100,7 @@ function CPHEditor (app, cfg) {
 
   Control.call(this);
 
+  this.debug && this.element().classList.add('debug');
   this.nolines && this.element().classList.add('nolines');
 
   this.lineElements = [];
@@ -142,6 +145,13 @@ function CPHEditor (app, cfg) {
   // FUTURE: Mobile support for cursors
   if (isMobile()) {
     this.element().classList.add('is-mobile');
+    var keyboardPositioner = function () {
+      if (!this._unloaded) {
+        this.__mobile_positionKeyboard();
+        window.requestAnimationFrame(keyboardPositioner);
+      }
+    }.bind(this);
+    keyboardPositioner();
     var selectionchangeListener = function (e) {
       if (this._unloaded) {
         document.removeEventListener('selectionchange', selectionchangeListener);
@@ -891,7 +901,7 @@ CPHEditor.prototype.eventListeners = {
       }
     }
   },
-  '.mobile-menu button': {
+  '.mobile-menu': {
     focus: function (e) {
       e.preventDefault();
       this.focus();
@@ -899,25 +909,42 @@ CPHEditor.prototype.eventListeners = {
   },
   '.mobile-menu button[name="cph-keypress"]': {
     click: function (e, el) {
+      e.preventDefault();
       var key = el.getAttribute('data-key');
+      var ctrlKey = false;
+      var metaKey = false;
+      var altKey = false;
+      var shiftKey = false;
       if (!key) {
         key = el.innerText;
       }
       key = key.trim();
       if (key === 'quotation-mark') {
         key = '"';
+      } else if (key === 'untab') {
+        key = 'tab';
+        shiftKey = true;
+      } else if (key === 'comment') {
+        key = '/';
+        metaKey = true;
+        ctrlKey = true;
       }
-      this.__captureKeydown(key, true);
+      this.focus();
+      setTimeout(function () { this.__captureKeydown(key, true, ctrlKey, metaKey, altKey, shiftKey); }.bind(this), 1);
     }
   },
   '.mobile-menu button[name="cph-undo"]': {
     click: function (e) {
-      this.gotoHistory(-1);
+      e.preventDefault();
+      this.focus();
+      setTimeout(function () { this.gotoHistory(-1); }.bind(this), 1);
     }
   },
   '.mobile-menu button[name="cph-redo"]': {
     click: function (e) {
-      this.gotoHistory(1);
+      e.preventDefault();
+      this.focus();
+      setTimeout(function () { this.gotoHistory(1); }.bind(this), 1);
     }
   }
 };
@@ -943,6 +970,7 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
         document.readyState === 'interactive'
       )
     ) {
+      this.__mobile_updateWindowSize();
       this._initialized = true;
       this.lineHeight = this.sampleLineElement.offsetHeight;
       this.paddingLeft = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-left')) || 0;
@@ -973,6 +1001,69 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
   }
 };
 
+CPHEditor.prototype.__mobile_updateWindowSize = function () {
+	this._lastViewportWidth = visualViewport.width;
+	this._lastViewportHeight = visualViewport.height;
+	this._lastOrientation = window.orientation;
+};
+
+CPHEditor.prototype.__mobile_hasOrientationChanged = function () {
+  if (
+    (
+      (this._lastOrientation == 0 || this._lastOrientation == 180) &&
+      (window.orientation == 0 || window.orientation == 180)
+    ) ||
+    (
+      (this._lastOrientation == 90 || this._lastOrientation == -90) &&
+      (window.orientation == 90 || window.orientation == -90)
+    )
+  ) {
+    return false
+  } else {
+    return true;
+  }
+};
+
+CPHEditor.prototype.__mobile_detectKeyboardHeight = function () {
+	if (
+    (this._lastViewportHeight - visualViewport.height > 150) &&
+    visualViewport.width === this._lastViewportWidth
+  ) {
+    // No orientation change, keyboard opening
+    this._mobileKeyboardHeight = this._lastViewportHeight - visualViewport.height;
+	} else if (
+    this.__mobile_hasOrientationChanged() &&
+    this._mobileKeyboardHeight
+  ) {
+    // Orientation change with keyboard already opened
+		this._mobileKeyboardHeight = screen.height - this._mobileTopBarHeight - visualViewport.height;
+	} else if (
+    (visualViewport.height - this._lastViewportHeight > 150) &&
+    visualViewport.width === this._lastViewportWidth
+  ) {
+    // No orientation change, keyboard closing
+		this._mobileKeyboardHeight = 0;
+	}
+  this.__mobile_updateWindowSize();
+  return [this._mobileKeyboardHeight, screen.height - this._mobileTopBarHeight - this._mobileKeyboardHeight];
+};
+
+CPHEditor.prototype.__mobile_positionKeyboard = function () {
+  var keyboardHeight = this.__mobile_detectKeyboardHeight();
+  var viewDelta = window.innerHeight - visualViewport.height;
+  var scrollDelta = Math.min(
+    0,
+    document.documentElement.scrollHeight -
+      (window.pageYOffset + window.innerHeight)
+  );
+  if (keyboardHeight[0]) {
+    this.element().classList.add('mobile-keyboard');
+    this.selector('.mobile-menu').style.bottom = viewDelta + 'px';
+  } else {
+    this.element().classList.remove('mobile-keyboard');
+  }
+};
+
 CPHEditor.prototype.__captureKeydown = function (key, forceInput, ctrlKey, metaKey, altKey, shiftKey, preventDefaultAndStopPropagation) {
   this._selecting = false;
   this._initialSelection = null;
@@ -994,7 +1085,6 @@ CPHEditor.prototype.__captureKeydown = function (key, forceInput, ctrlKey, metaK
   var fwdComplement = lang.forwardComplements[key] || '';
   var revComplement = lang.reverseComplements[key] || '';
   var strComplement = lang.stringComplements[key] || '';
-  console.log('key is?', key);
   if (!key) {
     preventDefaultAndStopPropagation();
   } else if (
@@ -1169,6 +1259,7 @@ CPHEditor.prototype.__captureKeydown = function (key, forceInput, ctrlKey, metaK
       this.scrollToText();
     } else if (forceInput) {
       this.userAction('InsertText', key);
+      this.scrollToText();
     }
   }
 };
