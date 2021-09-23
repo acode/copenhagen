@@ -17,7 +17,7 @@
 [control="CPHEditor"] {
   text-align: left;
   font-family: -apple-system, Arial;
-  font-size: 12px;
+  font-size: 13px;
   position: relative;
   border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.2);
@@ -86,7 +86,7 @@
     right: 0px;
     margin: 7px;
     margin-right: 23px;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1em;
     padding: 4px;
     z-index: 1;
@@ -111,6 +111,12 @@
   [control="CPHEditor"].is-mobile .editor textarea {
     caret-color: #6090ff !important;
     opacity: 1; }
+  [control="CPHEditor"].debug .editor textarea {
+    opacity: 1;
+    color: rgba(224, 30, 30, 0.5);
+    caret-color: #E01E1E; }
+    [control="CPHEditor"].debug .editor textarea::selection {
+      background-color: rgba(255, 170, 153, 0.5); }
   [control="CPHEditor"] .editor {
     overflow: hidden;
     transform: translate3d(0px, 0px, 0px);
@@ -118,12 +124,6 @@
     position: relative;
     background-color: #FFFFFF;
     border-radius: 4px; }
-    [control="CPHEditor"] .editor[data-debug] textarea {
-      opacity: 1;
-      color: rgba(224, 30, 30, 0.5);
-      caret-color: #E01E1E; }
-      [control="CPHEditor"] .editor[data-debug] textarea::selection {
-        background-color: rgba(255, 170, 153, 0.5); }
     [control="CPHEditor"] .editor .line-container {
       border-top-left-radius: 4px;
       border-bottom-left-radius: 4px;
@@ -140,8 +140,8 @@
         z-index: 20;
         flex-shrink: 0;
         width: 100%;
-        height: calc(100% + 18px);
-        font-size: 12px;
+        height: calc(100% + 20px);
+        font-size: 13px;
         transform: translate3d(0px, 0px, 0px);
         font-family: 'Source Code Pro', Monospace1, Monospace2, Monospace3, monospace;
         font-variant-ligatures: none !important;
@@ -155,8 +155,8 @@
           color: #DDDDDD;
           margin-top: 7px;
           transform: translate3d(0px, 0px, 0px);
-          height: 18px;
-          line-height: 18px; }
+          height: 20px;
+          line-height: 20px; }
           [control="CPHEditor"] .editor .line-container .line-numbers div.number.selected {
             color: #666666; }
           [control="CPHEditor"] .editor .line-container .line-numbers div.number.error {
@@ -326,10 +326,9 @@
           opacity: 0; }
       [control="CPHEditor"] .editor div.render div.line {
         width: 10000px;
-        margin-top: 7px;
         transform: translate3d(0px, 0px, 0px);
         position: absolute;
-        height: 18px;
+        height: 20px;
         overflow: visible; }
         [control="CPHEditor"] .editor div.render div.line > .fill {
           padding: 0px 7px;
@@ -460,20 +459,80 @@
       font-variant-ligatures: none !important;
       font-weight: 400;
       white-space: pre !important;
-      font-size: 12px;
-      line-height: 18px;
+      font-size: 13px;
+      line-height: 20px;
       background-color: transparent;
       outline: none;
       border: none;
       resize: none;
       -ms-overflow-style: none;
-      scrollbar-width: none;
       -moz-tab-size: 2 !important;
       -o-tab-size: 2 !important;
-      tab-size: 2 !important; }
+      tab-size: 2 !important;
+      scrollbar-width: none; }
       [control="CPHEditor"] .editor textarea::-webkit-scrollbar,
       [control="CPHEditor"] .editor div.render::-webkit-scrollbar {
         display: none; }
+  [control="CPHEditor"] div.mobile-menu {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    border-top: 1px solid #DDDDDD;
+    background-color: #F8F8F8; }
+    [control="CPHEditor"] div.mobile-menu div.menu-row {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #DDDDDD; }
+    [control="CPHEditor"] div.mobile-menu div.scrollable {
+      display: flex;
+      align-items: center;
+      flex-grow: 1;
+      box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.1);
+      overflow: auto;
+      scrollbar-width: none;
+      border-left: 1px solid #DDDDDD; }
+      [control="CPHEditor"] div.mobile-menu div.scrollable::-webkit-scrollbar {
+        display: none; }
+    [control="CPHEditor"] div.mobile-menu div.spacer {
+      flex-grow: 1;
+      border-left: 1px solid #DDDDDD;
+      height: 60px; }
+    [control="CPHEditor"] div.mobile-menu button {
+      font-family: 'Source Code Pro', Monospace1, Monospace2, Monospace3, monospace;
+      font-variant-ligatures: none !important;
+      font-weight: 400;
+      cursor: pointer;
+      margin: 0px;
+      padding: 0px;
+      flex-shrink: 0;
+      color: #111111;
+      font-size: 13px;
+      height: 60px;
+      min-width: 40px;
+      outline: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0px;
+      background-color: transparent;
+      border-radius: 0px; }
+      [control="CPHEditor"] div.mobile-menu button svg {
+        width: 12px;
+        height: 12px; }
+      [control="CPHEditor"] div.mobile-menu button.main {
+        background-color: #EFEFEF; }
+      [control="CPHEditor"] div.mobile-menu button.pad {
+        padding: 0px 16px; }
+      [control="CPHEditor"] div.mobile-menu button:not(:first-child) {
+        border-left: 1px solid #DDDDDD; }
+      [control="CPHEditor"] div.mobile-menu button:active {
+        color: #FFFFFF;
+        background-color: #3556E3; }
+  [control="CPHEditor"].mobile-keyboard div.mobile-menu {
+    display: flex; }
 
 control[control="CPHContextMenu"] {
   font-family: -apple-system, Arial;

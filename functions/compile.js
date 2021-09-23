@@ -1,4 +1,4 @@
-const VERSION = '0.2.0';
+const VERSION = 'v0.3.0';
 
 const fs = require('fs');
 const path = require('path');
@@ -17,7 +17,7 @@ function replaceStaticAssets (result) {
       /'\/static\/(.*?)'/gi,
       ($0, $1, $2) => `'${process.env.STATIC_ASSET_URL}${$1}'`
     )
-}
+};
 
 const BASE_DIR = './src';
 const COMPILERS = {
@@ -56,7 +56,7 @@ const COMPILERS = {
   },
   'style.css': (files, min, cachedValue) => {
     let data = files.map(f => f.value).join('\n');
-    data = data.replace(/("|')\/static\/(.*)?\1/gi, ($0, $1, $2) => `${$1}${process.env.STATIC_ASSET_URL}${$2}${$1}`);
+    data = replaceStaticAssets(data);
     let result = sass.renderSync({
       data: data,
       outputStyle: min ? 'compressed' : 'nested',

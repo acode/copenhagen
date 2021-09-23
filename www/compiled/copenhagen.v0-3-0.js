@@ -595,13 +595,17 @@ function CPHEditor (app, cfg) {
 
   this._inputDelay = 500;
   this._inputDelayTimeout = null;
+  this._inputDisabled = false;
+  this._currentComposition = []; // holds IME text composition
 
   this._contextMenu = null;
 
   this._preventMobileSelection = false;
-  // FUTURE: Better mobile controls
+  // TODO: FUTURE: Better mobile controls
   this._mobileTabDelay = 300;
   this._mobileTabTimeout = null;
+  this._mobileTopBarHeight = screen.height - window.innerHeight;
+  this._mobileKeyboardHeight = 0;
 
   this._lastFindValue = null;
   this._lastViewportValue = '';
@@ -666,6 +670,7 @@ function CPHEditor (app, cfg) {
 
   Control.call(this);
 
+  this.debug && this.element().classList.add('debug');
   this.nolines && this.element().classList.add('nolines');
 
   this.lineElements = [];
@@ -710,6 +715,13 @@ function CPHEditor (app, cfg) {
   // FUTURE: Mobile support for cursors
   if (isMobile()) {
     this.element().classList.add('is-mobile');
+    var keyboardPositioner = function () {
+      if (!this._unloaded) {
+        this.__mobile_positionKeyboard();
+        window.requestAnimationFrame(keyboardPositioner);
+      }
+    }.bind(this);
+    keyboardPositioner();
     var selectionchangeListener = function (e) {
       if (this._unloaded) {
         document.removeEventListener('selectionchange', selectionchangeListener);
@@ -1251,6 +1263,19 @@ CPHEditor.prototype.eventListeners = {
       this.render(this.value);
     },
     contextmenu: function capture (e) {
+      if (this.canGotoHistory(-1)) {
+        this._inputDisabled = true;
+        document.execCommand('insertText', false, String.fromCharCode(0));
+        this._inputDisabled = false;
+      }
+      if (this.canGotoHistory(1)) {
+        this._inputDisabled = true;
+        document.execCommand('insertText', false, String.fromCharCode(0));
+        document.execCommand('undo', false, null);
+        this._inputDisabled = false;
+      }
+      return;
+      // TODO: Deprecated. Use browser native context window.
       this.dispatch('contextmenu', this, e);
       if (!e.defaultPrevented) {
         e.preventDefault();
@@ -1334,18 +1359,49 @@ CPHEditor.prototype.eventListeners = {
         moveListener(e, hasModifier, false);
       }
     },
+    compositionstart: function (e) {
+      this._currentComposition = [];
+    },
+    compositionupdate: function (e) {
+      this._currentComposition.push(e.data + '');
+    },
+    compositionend: function (e) {
+      this._currentComposition = [];
+    },
     input: function (e) {
-      var text = e.data;
-      var type = e.inputType;
-      if (type === 'insertText') {
-        this.userAction('InsertText', text);
-        this.scrollToText();
-      } else if (type === 'historyUndo') {
-        this.gotoHistory(-1);
-      } else if (type === 'historyRedo') {
-        this.gotoHistory(1);
+      e.preventDefault();
+      if (this._inputDisabled) {
+        return;
       } else {
-        this.render(this.value);
+        var text = e.data;
+        var type = e.inputType;
+        if (
+          type === 'deleteContent' ||
+          type === 'deleteContentBackward'
+        ) {
+          e.stopPropagation();
+          this.__captureKeydown('backspace', true);
+        } else if (type === 'deleteContentForward') {
+          e.stopPropagation();
+          this.__captureKeydown('delete', true);
+        } else if (type === 'insertText') {
+          this.userAction('InsertText', text);
+          this.scrollToText();
+        } else if (type === 'insertCompositionText') {
+          if (this._currentComposition.length > 1) {
+            this.userAction('RemoveText', -this._currentComposition[this._currentComposition.length - 2].length);
+          }
+          if (this._currentComposition.length) {
+            this.userAction('InsertText', this._currentComposition[this._currentComposition.length - 1]);
+            this.scrollToText();
+          }
+        } else if (type === 'historyUndo') {
+          this.gotoHistory(-1);
+        } else if (type === 'historyRedo') {
+          this.gotoHistory(1);
+        } else {
+          this.render(this.value);
+        }
       }
     },
     cut: function (e) {
@@ -1383,201 +1439,15 @@ CPHEditor.prototype.eventListeners = {
       this.scrollToText();
     },
     keydown: function capture (e) {
-      this._selecting = false;
-      this._initialSelection = null;
-      var cursor = this.user.cursors[0];
-      var inString = this.inString(cursor.selectionStart);
-      var inComment = this.inComment(cursor.selectionStart);
-      var preventDefaultAndStopPropagation = function () {
-        e.preventDefault();
-        e.stopPropagation();
-      };
-      var ctrlKey = !!(e.metaKey || ((isWindows() || isLinux()) && e.ctrlKey));
-      var isModified = e.metaKey || e.ctrlKey || e.altKey;
-      var key = (e.key || '').toLowerCase();
-      var hotkey = [
-        ['', 'ctrl'][ctrlKey | 0],
-        ['', 'alt'][e.altKey | 0],
-        ['', 'shift'][e.shiftKey | 0],
-        key
-      ].filter(function (v) { return !!v; }).join('+');
-      var lang = this.getActiveLanguageDictionary();
-      var fwdComplement = lang.forwardComplements[e.key] || '';
-      var revComplement = lang.reverseComplements[e.key] || '';
-      var strComplement = lang.stringComplements[e.key] || '';
-      if (!key) {
-        preventDefaultAndStopPropagation();
-      } else if (
-        ctrlKey && key === 'v' ||
-        ctrlKey && key === 'x' ||
-        ctrlKey && key === 'c' ||
-        key.endsWith('lock') ||
-        key.startsWith('control') ||
-        key.startsWith('alt') ||
-        key === 'contextmenu' ||
-        key === 'altgraph' ||
-        key === 'os' ||
-        key === 'unidentified'
-      ) {
-        // Do nothing: allow native behavior
-        //  Windows ContextMenu key,
-        //  AltGraphic key and OS key,
-        //  CapsLock
-      } else if (this.hotkeys[hotkey]) {
-        preventDefaultAndStopPropagation();
-        this.shortcut(hotkey);
-      } else if (key === 'backspace') {
-        preventDefaultAndStopPropagation();
-        if (e.altKey) {
-          this.userAction('MoveCursorsByWord', 'left', true);
-          this.userAction('RemoveText', -1);
-          this.scrollToText();
-        } else {
-          if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
-            this.userAction('RemoveText', -1);
-            this.scrollToText();
-          } else {
-            var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
-            var nextCharacter = this.value[this.user.cursors[0].selectionStart];
-            var prevCharacter = this.value[this.user.cursors[0].selectionStart - 1];
-            if (nextCharacter && nextCharacter === lang.forwardComplements[prevCharacter]) {
-              this.userAction('MoveCursors', 'right');
-              this.userAction('RemoveText', -2);
-              this.scrollToText();
-            } else {
-              for (var tabChars = 0; tabChars < lang.tabWidth; tabChars++) {
-                if (selInfo.linesPrefix[selInfo.linesPrefix.length - tabChars - 1] === lang.tabChar) {
-                  continue;
-                } else {
-                  break;
-                }
-              }
-              if (tabChars) {
-                var removeCount = ((selInfo.linesPrefix.length - tabChars) % lang.tabWidth) || tabChars;
-                this.userAction('RemoveText', -removeCount);
-                this.scrollToText();
-              } else {
-                this.userAction('RemoveText', -1);
-                this.scrollToText();
-              }
-            }
-          }
+      this.__captureKeydown(
+        e.key,
+        false,
+        e.ctrlKey, e.metaKey, e.altKey, e.shiftKey,
+        function () {
+          e.preventDefault();
+          e.stopPropagation();
         }
-      } else if (key === 'delete') {
-        preventDefaultAndStopPropagation();
-        if (e.altKey) {
-          this.userAction('MoveCursorsByWord', 'right', true);
-          this.userAction('RemoveText', 1);
-          this.scrollToText();
-        } else {
-          this.userAction('RemoveText', 1);
-          this.scrollToText();
-        }
-      } else if (!isModified && key !== 'shift') {
-        if (key === 'escape') {
-          preventDefaultAndStopPropagation();
-          this.userAction('ResetCursor');
-          if (this.control('find-replace').isVisible()) {
-            this.control('find-replace').hide();
-          }
-          if (this._contextMenu) {
-            this._contextMenu.close();
-          }
-          if (this._autocomplete) {
-            this._autocomplete = null;
-            this.dispatch('autocomplete', this, null, null, null);
-          }
-          this.dispatch('cancel', this);
-        } else if (key === 'enter') {
-          preventDefaultAndStopPropagation();
-          if (this._autocomplete) {
-            this.dispatch(
-              'autocomplete/submit',
-              this,
-              this._autocomplete.name,
-              this._autocomplete.result
-            );
-          } else {
-            this.userAction('InsertText', '\n');
-            this.scrollToText();
-          }
-        } else if (key === 'tab') {
-          if (e.key.toLowerCase() === 'tab' && this.tabout) {
-            return;
-          } else {
-            preventDefaultAndStopPropagation();
-            if (this._autocomplete) {
-              this.dispatch(
-                'autocomplete/submit',
-                this,
-                this._autocomplete.name,
-                this._autocomplete.result
-              );
-            } else if (e.shiftKey) {
-              this.userAction('RemoveIndent');
-            } else if (this.user.cursors.length <= 1 && !this.user.cursors[0].width()) {
-              if (this._suggestion) {
-                var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
-                this.userAction('MoveCursors', 'right', selInfo.linesSuffix.length);
-                this.userAction('InsertText', this._suggestion.value, this._suggestion.adjust, this._suggestion.cursorLength);
-              } else {
-                this.userAction('InsertText', lang.tabChar.repeat(lang.tabWidth));
-              }
-            } else {
-              this.userAction('AddIndent');
-            }
-            this.scrollToText();
-          }
-        } else if (key.startsWith('arrow')) {
-          preventDefaultAndStopPropagation();
-          var direction = key.slice('arrow'.length);
-          if (this._autocomplete && (direction === 'up' || direction === 'down')) {
-            this.dispatch(
-              'autocomplete/' + direction,
-              this,
-              this._autocomplete.name,
-              this._autocomplete.result
-            );
-          } else {
-            this.userAction('MoveCursors', direction, 1, e.shiftKey);
-            this.scrollToText();
-          }
-        } else if (key.startsWith('page')) {
-          preventDefaultAndStopPropagation();
-          this.scrollPage(key.slice('page'.length));
-        } else if (key === 'end') {
-          preventDefaultAndStopPropagation();
-          this.userAction('MoveCursorsByLine', 'right');
-          this.scrollToText();
-        } else if (key === 'home') {
-          preventDefaultAndStopPropagation();
-          this.userAction('MoveCursorsByLine', 'left');
-          this.scrollToText();
-        } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
-          preventDefaultAndStopPropagation();
-          this.userAction('InsertText', e.key);
-          this.scrollToText();
-        } else if (
-          revComplement &&
-          this.value[this.user.cursors[0].selectionStart - 1] === revComplement
-        ) {
-          preventDefaultAndStopPropagation();
-          if (this.value[this.user.cursors[0].selectionStart] === e.key) {
-            this.userAction('MoveCursors', 'right', 1);
-          } else {
-            this.userAction('InsertText', e.key);
-          }
-          this.scrollToText();
-        } else if (
-          // do not complement strings if already in string or comment
-          fwdComplement &&
-          (!strComplement || (strComplement && (!inString && !inComment)))
-        ) {
-          preventDefaultAndStopPropagation();
-          this.userAction('InsertText', e.key + fwdComplement, -1);
-          this.scrollToText();
-        }
-      }
+      );
     },
     scroll: function (e) {
       if (this._selecting) {
@@ -1599,6 +1469,52 @@ CPHEditor.prototype.eventListeners = {
       } else {
         this.render(this.value);
       }
+    }
+  },
+  '.mobile-menu': {
+    focus: function (e) {
+      e.preventDefault();
+      this.focus();
+    }
+  },
+  '.mobile-menu button[name="cph-keypress"]': {
+    click: function (e, el) {
+      e.preventDefault();
+      var key = el.getAttribute('data-key');
+      var ctrlKey = false;
+      var metaKey = false;
+      var altKey = false;
+      var shiftKey = false;
+      if (!key) {
+        key = el.innerText;
+      }
+      key = key.trim();
+      if (key === 'quotation-mark') {
+        key = '"';
+      } else if (key === 'untab') {
+        key = 'tab';
+        shiftKey = true;
+      } else if (key === 'comment') {
+        key = '/';
+        metaKey = true;
+        ctrlKey = true;
+      }
+      this.focus();
+      setTimeout(function () { this.__captureKeydown(key, true, ctrlKey, metaKey, altKey, shiftKey); }.bind(this), 1);
+    }
+  },
+  '.mobile-menu button[name="cph-undo"]': {
+    click: function (e) {
+      e.preventDefault();
+      this.focus();
+      setTimeout(function () { this.gotoHistory(-1); }.bind(this), 1);
+    }
+  },
+  '.mobile-menu button[name="cph-redo"]': {
+    click: function (e) {
+      e.preventDefault();
+      this.focus();
+      setTimeout(function () { this.gotoHistory(1); }.bind(this), 1);
     }
   }
 };
@@ -1624,6 +1540,7 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
         document.readyState === 'interactive'
       )
     ) {
+      this.__mobile_updateWindowSize();
       this._initialized = true;
       this.lineHeight = this.sampleLineElement.offsetHeight;
       this.paddingLeft = parseInt(window.getComputedStyle(this.inputElement, null).getPropertyValue('padding-left')) || 0;
@@ -1650,6 +1567,269 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
       // Exponential backoff for initialization
       //  Prevents latency on huge page reflows when editor added dynamically
       setTimeout(this.__initialize__.bind(this, backoff * 2), backoff);
+    }
+  }
+};
+
+CPHEditor.prototype.__mobile_updateWindowSize = function () {
+	this._lastViewportWidth = visualViewport.width;
+	this._lastViewportHeight = visualViewport.height;
+	this._lastOrientation = window.orientation;
+};
+
+CPHEditor.prototype.__mobile_hasOrientationChanged = function () {
+  if (
+    (
+      (this._lastOrientation == 0 || this._lastOrientation == 180) &&
+      (window.orientation == 0 || window.orientation == 180)
+    ) ||
+    (
+      (this._lastOrientation == 90 || this._lastOrientation == -90) &&
+      (window.orientation == 90 || window.orientation == -90)
+    )
+  ) {
+    return false
+  } else {
+    return true;
+  }
+};
+
+CPHEditor.prototype.__mobile_detectKeyboardHeight = function () {
+	if (
+    (this._lastViewportHeight - visualViewport.height > 150) &&
+    visualViewport.width === this._lastViewportWidth
+  ) {
+    // No orientation change, keyboard opening
+    this._mobileKeyboardHeight = this._lastViewportHeight - visualViewport.height;
+	} else if (
+    this.__mobile_hasOrientationChanged() &&
+    this._mobileKeyboardHeight
+  ) {
+    // Orientation change with keyboard already opened
+		this._mobileKeyboardHeight = screen.height - this._mobileTopBarHeight - visualViewport.height;
+	} else if (
+    (visualViewport.height - this._lastViewportHeight > 150) &&
+    visualViewport.width === this._lastViewportWidth
+  ) {
+    // No orientation change, keyboard closing
+		this._mobileKeyboardHeight = 0;
+	}
+  this.__mobile_updateWindowSize();
+  return [this._mobileKeyboardHeight, screen.height - this._mobileTopBarHeight - this._mobileKeyboardHeight];
+};
+
+CPHEditor.prototype.__mobile_positionKeyboard = function () {
+  var keyboardHeight = this.__mobile_detectKeyboardHeight();
+  var viewDelta = window.innerHeight - visualViewport.height;
+  var scrollDelta = Math.min(
+    0,
+    document.documentElement.scrollHeight -
+      (window.pageYOffset + window.innerHeight)
+  );
+  if (keyboardHeight[0]) {
+    this.element().classList.add('mobile-keyboard');
+    this.selector('.mobile-menu').style.bottom = viewDelta + 'px';
+  } else {
+    this.element().classList.remove('mobile-keyboard');
+  }
+};
+
+CPHEditor.prototype.__captureKeydown = function (key, forceInput, ctrlKey, metaKey, altKey, shiftKey, preventDefaultAndStopPropagation) {
+  this._selecting = false;
+  this._initialSelection = null;
+  var cursor = this.user.cursors[0];
+  var inString = this.inString(cursor.selectionStart);
+  var inComment = this.inComment(cursor.selectionStart);
+  preventDefaultAndStopPropagation = preventDefaultAndStopPropagation || function () {};
+  ctrlKey = !!(metaKey || ((isWindows() || isLinux()) && ctrlKey));
+  var isModified = metaKey || ctrlKey || altKey;
+  var originalKey = key || '';
+  var key = (key || '').toLowerCase();
+  var hotkey = [
+    ['', 'ctrl'][ctrlKey | 0],
+    ['', 'alt'][altKey | 0],
+    ['', 'shift'][shiftKey | 0],
+    key
+  ].filter(function (v) { return !!v; }).join('+');
+  var lang = this.getActiveLanguageDictionary();
+  var fwdComplement = lang.forwardComplements[key] || '';
+  var revComplement = lang.reverseComplements[key] || '';
+  var strComplement = lang.stringComplements[key] || '';
+  if (!key) {
+    preventDefaultAndStopPropagation();
+  } else if (
+    ctrlKey && key === 'v' ||
+    ctrlKey && key === 'x' ||
+    ctrlKey && key === 'c' ||
+    key.endsWith('lock') ||
+    key.startsWith('control') ||
+    key.startsWith('alt') ||
+    key === 'contextmenu' ||
+    key === 'altgraph' ||
+    key === 'os' ||
+    key === 'unidentified'
+  ) {
+    // Do nothing: allow native behavior
+    //  Windows ContextMenu key,
+    //  AltGraphic key and OS key,
+    //  CapsLock,
+    //  Android text input...
+  } else if (this.hotkeys[hotkey]) {
+    preventDefaultAndStopPropagation();
+    this.shortcut(hotkey);
+  } else if (key === 'backspace') {
+    preventDefaultAndStopPropagation();
+    if (altKey) {
+      this.userAction('MoveCursorsByWord', 'left', true);
+      this.userAction('RemoveText', -1);
+      this.scrollToText();
+    } else {
+      if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
+        this.userAction('RemoveText', -1);
+        this.scrollToText();
+      } else {
+        var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
+        var nextCharacter = this.value[this.user.cursors[0].selectionStart];
+        var prevCharacter = this.value[this.user.cursors[0].selectionStart - 1];
+        if (nextCharacter && nextCharacter === lang.forwardComplements[prevCharacter]) {
+          this.userAction('MoveCursors', 'right');
+          this.userAction('RemoveText', -2);
+          this.scrollToText();
+        } else {
+          for (var tabChars = 0; tabChars < lang.tabWidth; tabChars++) {
+            if (selInfo.linesPrefix[selInfo.linesPrefix.length - tabChars - 1] === lang.tabChar) {
+              continue;
+            } else {
+              break;
+            }
+          }
+          if (tabChars) {
+            var removeCount = ((selInfo.linesPrefix.length - tabChars) % lang.tabWidth) || tabChars;
+            this.userAction('RemoveText', -removeCount);
+            this.scrollToText();
+          } else {
+            this.userAction('RemoveText', -1);
+            this.scrollToText();
+          }
+        }
+      }
+    }
+  } else if (key === 'delete') {
+    preventDefaultAndStopPropagation();
+    if (altKey) {
+      this.userAction('MoveCursorsByWord', 'right', true);
+      this.userAction('RemoveText', 1);
+      this.scrollToText();
+    } else {
+      this.userAction('RemoveText', 1);
+      this.scrollToText();
+    }
+  } else if (!isModified && key !== 'shift') {
+    if (key === 'escape') {
+      preventDefaultAndStopPropagation();
+      this.userAction('ResetCursor');
+      if (this.control('find-replace').isVisible()) {
+        this.control('find-replace').hide();
+      }
+      if (this._contextMenu) {
+        this._contextMenu.close();
+      }
+      if (this._autocomplete) {
+        this._autocomplete = null;
+        this.dispatch('autocomplete', this, null, null, null);
+      }
+      this.dispatch('cancel', this);
+    } else if (key === 'enter') {
+      preventDefaultAndStopPropagation();
+      if (this._autocomplete) {
+        this.dispatch(
+          'autocomplete/submit',
+          this,
+          this._autocomplete.name,
+          this._autocomplete.result
+        );
+      } else {
+        this.userAction('InsertText', '\n');
+        this.scrollToText();
+      }
+    } else if (key === 'tab') {
+      if (this.tabout) {
+        return;
+      } else {
+        preventDefaultAndStopPropagation();
+        if (this._autocomplete) {
+          this.dispatch(
+            'autocomplete/submit',
+            this,
+            this._autocomplete.name,
+            this._autocomplete.result
+          );
+        } else if (shiftKey) {
+          this.userAction('RemoveIndent');
+        } else if (this.user.cursors.length <= 1 && !this.user.cursors[0].width()) {
+          if (this._suggestion) {
+            var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
+            this.userAction('MoveCursors', 'right', selInfo.linesSuffix.length);
+            this.userAction('InsertText', this._suggestion.value, this._suggestion.adjust, this._suggestion.cursorLength);
+          } else {
+            this.userAction('InsertText', lang.tabChar.repeat(lang.tabWidth));
+          }
+        } else {
+          this.userAction('AddIndent');
+        }
+        this.scrollToText();
+      }
+    } else if (key.startsWith('arrow')) {
+      preventDefaultAndStopPropagation();
+      var direction = key.slice('arrow'.length);
+      if (this._autocomplete && (direction === 'up' || direction === 'down')) {
+        this.dispatch(
+          'autocomplete/' + direction,
+          this,
+          this._autocomplete.name,
+          this._autocomplete.result
+        );
+      } else {
+        this.userAction('MoveCursors', direction, 1, shiftKey);
+        this.scrollToText();
+      }
+    } else if (key.startsWith('page')) {
+      preventDefaultAndStopPropagation();
+      this.scrollPage(key.slice('page'.length));
+    } else if (key === 'end') {
+      preventDefaultAndStopPropagation();
+      this.userAction('MoveCursorsByLine', 'right');
+      this.scrollToText();
+    } else if (key === 'home') {
+      preventDefaultAndStopPropagation();
+      this.userAction('MoveCursorsByLine', 'left');
+      this.scrollToText();
+    } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
+      preventDefaultAndStopPropagation();
+      this.userAction('InsertText', originalKey);
+      this.scrollToText();
+    } else if (
+      revComplement &&
+      this.value[this.user.cursors[0].selectionStart - 1] === revComplement
+    ) {
+      preventDefaultAndStopPropagation();
+      if (this.value[this.user.cursors[0].selectionStart] === key) {
+        this.userAction('MoveCursors', 'right', 1);
+      } else {
+        this.userAction('InsertText', key);
+      }
+      this.scrollToText();
+    } else if (
+      // do not complement strings if already in string or comment
+      fwdComplement &&
+      (!strComplement || (strComplement && (!inString && !inComment)))
+    ) {
+      preventDefaultAndStopPropagation();
+      this.userAction('InsertText', key + fwdComplement, -1);
+      this.scrollToText();
+    } else if (forceInput) {
+      this.userAction('InsertText', key);
+      this.scrollToText();
     }
   }
 };
@@ -1833,6 +2013,14 @@ CPHEditor.prototype.save = function () {
  */
 CPHEditor.prototype.clearHistory = function () {
   this.history.reset(this.value);
+};
+
+/**
+ * Check if user can go to history, forward or backward.
+ * @param {integer} amount
+ */
+CPHEditor.prototype.canGotoHistory = function (amount) {
+  return this.history.canGoto(this.user, amount);
 };
 
 /**
@@ -2451,7 +2639,7 @@ CPHEditor.prototype.__render = function (
       ['line'],
       {
         offset: lineElements.length,
-        style: 'top: ' + (lineElements.length * this.lineHeight) + 'px'
+        style: 'transform: translate3d(0px, ' + (lineElements.length * this.lineHeight) + 'px, 0px)'
       }
     );
     lineFragment.appendChild(lineElement);
@@ -2461,7 +2649,7 @@ CPHEditor.prototype.__render = function (
       ['annotation'],
       {
         offset: lineAnnotationElements.length,
-        style: 'top: ' + (lineAnnotationElements.length * this.lineHeight) + 'px'
+        style: 'transform: translate3d(0px, ' + (lineAnnotationElements.length * this.lineHeight) + 'px, 0px)'
       }
     )
     lineAnnotationFragment.appendChild(lineAnnotationElement);
@@ -2471,7 +2659,7 @@ CPHEditor.prototype.__render = function (
       ['number'],
       {
         offset: lineNumberElements.length,
-        style: 'top: ' + (lineNumberElements.length * this.lineHeight) + 'px'
+        style: 'transform: translate3d(0px, ' + (lineNumberElements.length * this.lineHeight) + 'px, 0px)'
       }
     )
     lineNumberFragment.appendChild(lineNumberElement);
@@ -4238,7 +4426,11 @@ function CPHHistory (initialValue) {
 // Can only travel forward / backward in history to these events
 CPHHistory.prototype.gotoEnabled = {
   'InsertText': true,
-  'RemoveText': true
+  'RemoveText': true,
+  'InsertLines': true,
+  'AddIndent': true,
+  'RemoveIndent': true,
+  'ToggleComment': true
 };
 
 // Don't store duplicates of this event
@@ -4247,7 +4439,7 @@ CPHHistory.prototype.deduplicate = {
 };
 
 CPHHistory.prototype.reset = function (initialValue) {
-  initialValue = ((initialValue || '') + '').replace(/\r/gi, ''); // remove carriage returns
+  initialValue = ((initialValue || '') + '').replace(/\r/gi, ''); // remove carriage returns (windows)
   this.initialValue = initialValue;
   this.acknowledged = {add: -1, remove: -1};
   this.operations = {add: [], remove: []};
@@ -5183,7 +5375,7 @@ function regexicon () {
 
 Template.add(CPHEditor, function anonymous(it
 ) {
-var out='<div class="editor" ';if(this.debug){out+='data-debug';}out+=' > <control control="CPHFindReplace" name="find-replace"></control> <div class="read-only"> read only <span data-language></span> </div> <div class="line-container"> <div class="line-numbers"></div> </div> <div class="edit-text"> <div class="scrollbar vertical"><div class="scroller"></div></div> <div class="scrollbar horizontal"><div class="scroller"></div></div> <div class="annotations"></div> <textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" wrap="off" tabIndex="-1"></textarea> <div class="render"></div> <div class="render sample"><div class="line"><span class="fill">x</span></div></div> <div class="render limit"><span class="fill">'+( 'W'.repeat(80) )+'</span></div> </div></div>';return out;
+var out='<div class="editor"> <control control="CPHFindReplace" name="find-replace"></control> <div class="read-only"> read only <span data-language></span> </div> <div class="line-container"> <div class="line-numbers"></div> </div> <div class="edit-text"> <div class="scrollbar vertical"><div class="scroller"></div></div> <div class="scrollbar horizontal"><div class="scroller"></div></div> <div class="annotations"></div> <textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="none" wrap="off" inputmode="text" tabIndex="-1"></textarea> <div class="render"></div> <div class="render sample"><div class="line"><span class="fill">x</span></div></div> <div class="render limit"><span class="fill">'+( 'W'.repeat(80) )+'</span></div> </div></div><div class="mobile-menu"> <div class="menu-row"> <button class="main pad" name="cph-keypress" data-key="tab">tab</button> <div class="scrollable"> <button name="cph-keypress">(</button> <button name="cph-keypress">{</button> <button name="cph-keypress">[</button> <button name="cph-keypress">`</button> <button name="cph-keypress">$</button> <button name="cph-keypress">\'</button> <button name="cph-keypress" data-key="quotation-mark">&quot;</button> <button name="cph-keypress">!</button> <button name="cph-keypress">?</button> <button name="cph-keypress">|</button> <button name="cph-keypress">&</button> <button name="cph-keypress">=</button> <button name="cph-keypress">:</button> <button name="cph-keypress" data-key="<">&lt;</button> <button name="cph-keypress" data-key=">">&gt;</button> <button name="cph-keypress">/</button> <button name="cph-keypress">*</button> <button name="cph-keypress">%</button> <button name="cph-keypress">\\</button> <button name="cph-keypress">+</button> <button name="cph-keypress">-</button> <button name="cph-keypress">_</button> <button name="cph-keypress">)</button> <button name="cph-keypress">}</button> <button name="cph-keypress">]</button> <button name="cph-keypress">^</button> <button name="cph-keypress">~</button> <button name="cph-keypress">#</button> <button name="cph-keypress">@</button> <button class="pad" name="cph-keypress" data-key="untab">untab</button> <button class="pad" name="cph-keypress" data-key="comment">//</button> <button class="pad" name="cph-undo">'+( feather.icons['rotate-ccw'].toSvg() )+'&nbsp;undo</button> <button class="pad" name="cph-redo">'+( feather.icons['rotate-cw'].toSvg() )+'&nbsp;redo</button> </div> <button class="main" name="cph-keypress" data-key="arrowleft">'+( feather.icons['arrow-left'].toSvg() )+'</button> <button class="main" name="cph-keypress" data-key="arrowright">'+( feather.icons['arrow-right'].toSvg() )+'</button> </div></div>';return out;
 });
 Template.add(CPHContextMenu, function anonymous(it
 ) {
