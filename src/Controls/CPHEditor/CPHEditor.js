@@ -26,6 +26,7 @@ function CPHEditor (app, cfg) {
   this._inputDelay = 500;
   this._inputDelayTimeout = null;
   this._inputDisabled = false;
+  this._currentComposition = []; // holds IME text composition
 
   this._contextMenu = null;
 
@@ -778,6 +779,15 @@ CPHEditor.prototype.eventListeners = {
         moveListener(e, hasModifier, false);
       }
     },
+    compositionstart: function (e) {
+      this._currentComposition = [];
+    },
+    compositionupdate: function (e) {
+      this._currentComposition.push(e.data + '');
+    },
+    compositionend: function (e) {
+      this._currentComposition = [];
+    },
     input: function (e) {
       e.preventDefault();
       if (this._inputDisabled) {
@@ -785,9 +795,26 @@ CPHEditor.prototype.eventListeners = {
       } else {
         var text = e.data;
         var type = e.inputType;
-        if (type === 'insertText') {
+        if (
+          type === 'deleteContent' ||
+          type === 'deleteContentBackward'
+        ) {
+          e.stopPropagation();
+          this.__captureKeydown('backspace');
+        } else if (type === 'deleteContentForward') {
+          e.stopPropagation();
+          this.__captureKeydown('delete');
+        } else if (type === 'insertText') {
           this.userAction('InsertText', text);
           this.scrollToText();
+        } else if (type === 'insertCompositionText') {
+          if (this._currentComposition.length > 1) {
+            this.userAction('RemoveText', -this._currentComposition[this._currentComposition.length - 2].length);
+          }
+          if (this._currentComposition.length) {
+            this.userAction('InsertText', this._currentComposition[this._currentComposition.length - 1]);
+            this.scrollToText();
+          }
         } else if (type === 'historyUndo') {
           this.gotoHistory(-1);
         } else if (type === 'historyRedo') {
@@ -832,201 +859,13 @@ CPHEditor.prototype.eventListeners = {
       this.scrollToText();
     },
     keydown: function capture (e) {
-      this._selecting = false;
-      this._initialSelection = null;
-      var cursor = this.user.cursors[0];
-      var inString = this.inString(cursor.selectionStart);
-      var inComment = this.inComment(cursor.selectionStart);
-      var preventDefaultAndStopPropagation = function () {
-        e.preventDefault();
-        e.stopPropagation();
-      };
-      var ctrlKey = !!(e.metaKey || ((isWindows() || isLinux()) && e.ctrlKey));
-      var isModified = e.metaKey || e.ctrlKey || e.altKey;
-      var key = (e.key || '').toLowerCase();
-      var hotkey = [
-        ['', 'ctrl'][ctrlKey | 0],
-        ['', 'alt'][e.altKey | 0],
-        ['', 'shift'][e.shiftKey | 0],
-        key
-      ].filter(function (v) { return !!v; }).join('+');
-      var lang = this.getActiveLanguageDictionary();
-      var fwdComplement = lang.forwardComplements[e.key] || '';
-      var revComplement = lang.reverseComplements[e.key] || '';
-      var strComplement = lang.stringComplements[e.key] || '';
-      if (!key) {
-        preventDefaultAndStopPropagation();
-      } else if (
-        ctrlKey && key === 'v' ||
-        ctrlKey && key === 'x' ||
-        ctrlKey && key === 'c' ||
-        key.endsWith('lock') ||
-        key.startsWith('control') ||
-        key.startsWith('alt') ||
-        key === 'contextmenu' ||
-        key === 'altgraph' ||
-        key === 'os' ||
-        key === 'unidentified'
-      ) {
-        // Do nothing: allow native behavior
-        //  Windows ContextMenu key,
-        //  AltGraphic key and OS key,
-        //  CapsLock
-      } else if (this.hotkeys[hotkey]) {
-        preventDefaultAndStopPropagation();
-        this.shortcut(hotkey);
-      } else if (key === 'backspace') {
-        preventDefaultAndStopPropagation();
-        if (e.altKey) {
-          this.userAction('MoveCursorsByWord', 'left', true);
-          this.userAction('RemoveText', -1);
-          this.scrollToText();
-        } else {
-          if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
-            this.userAction('RemoveText', -1);
-            this.scrollToText();
-          } else {
-            var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
-            var nextCharacter = this.value[this.user.cursors[0].selectionStart];
-            var prevCharacter = this.value[this.user.cursors[0].selectionStart - 1];
-            if (nextCharacter && nextCharacter === lang.forwardComplements[prevCharacter]) {
-              this.userAction('MoveCursors', 'right');
-              this.userAction('RemoveText', -2);
-              this.scrollToText();
-            } else {
-              for (var tabChars = 0; tabChars < lang.tabWidth; tabChars++) {
-                if (selInfo.linesPrefix[selInfo.linesPrefix.length - tabChars - 1] === lang.tabChar) {
-                  continue;
-                } else {
-                  break;
-                }
-              }
-              if (tabChars) {
-                var removeCount = ((selInfo.linesPrefix.length - tabChars) % lang.tabWidth) || tabChars;
-                this.userAction('RemoveText', -removeCount);
-                this.scrollToText();
-              } else {
-                this.userAction('RemoveText', -1);
-                this.scrollToText();
-              }
-            }
-          }
+      this.__captureKeydown(
+        e.key, e.ctrlKey, e.metaKey, e.altKey, e.shiftKey,
+        function () {
+          e.preventDefault();
+          e.stopPropagation();
         }
-      } else if (key === 'delete') {
-        preventDefaultAndStopPropagation();
-        if (e.altKey) {
-          this.userAction('MoveCursorsByWord', 'right', true);
-          this.userAction('RemoveText', 1);
-          this.scrollToText();
-        } else {
-          this.userAction('RemoveText', 1);
-          this.scrollToText();
-        }
-      } else if (!isModified && key !== 'shift') {
-        if (key === 'escape') {
-          preventDefaultAndStopPropagation();
-          this.userAction('ResetCursor');
-          if (this.control('find-replace').isVisible()) {
-            this.control('find-replace').hide();
-          }
-          if (this._contextMenu) {
-            this._contextMenu.close();
-          }
-          if (this._autocomplete) {
-            this._autocomplete = null;
-            this.dispatch('autocomplete', this, null, null, null);
-          }
-          this.dispatch('cancel', this);
-        } else if (key === 'enter') {
-          preventDefaultAndStopPropagation();
-          if (this._autocomplete) {
-            this.dispatch(
-              'autocomplete/submit',
-              this,
-              this._autocomplete.name,
-              this._autocomplete.result
-            );
-          } else {
-            this.userAction('InsertText', '\n');
-            this.scrollToText();
-          }
-        } else if (key === 'tab') {
-          if (e.key.toLowerCase() === 'tab' && this.tabout) {
-            return;
-          } else {
-            preventDefaultAndStopPropagation();
-            if (this._autocomplete) {
-              this.dispatch(
-                'autocomplete/submit',
-                this,
-                this._autocomplete.name,
-                this._autocomplete.result
-              );
-            } else if (e.shiftKey) {
-              this.userAction('RemoveIndent');
-            } else if (this.user.cursors.length <= 1 && !this.user.cursors[0].width()) {
-              if (this._suggestion) {
-                var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
-                this.userAction('MoveCursors', 'right', selInfo.linesSuffix.length);
-                this.userAction('InsertText', this._suggestion.value, this._suggestion.adjust, this._suggestion.cursorLength);
-              } else {
-                this.userAction('InsertText', lang.tabChar.repeat(lang.tabWidth));
-              }
-            } else {
-              this.userAction('AddIndent');
-            }
-            this.scrollToText();
-          }
-        } else if (key.startsWith('arrow')) {
-          preventDefaultAndStopPropagation();
-          var direction = key.slice('arrow'.length);
-          if (this._autocomplete && (direction === 'up' || direction === 'down')) {
-            this.dispatch(
-              'autocomplete/' + direction,
-              this,
-              this._autocomplete.name,
-              this._autocomplete.result
-            );
-          } else {
-            this.userAction('MoveCursors', direction, 1, e.shiftKey);
-            this.scrollToText();
-          }
-        } else if (key.startsWith('page')) {
-          preventDefaultAndStopPropagation();
-          this.scrollPage(key.slice('page'.length));
-        } else if (key === 'end') {
-          preventDefaultAndStopPropagation();
-          this.userAction('MoveCursorsByLine', 'right');
-          this.scrollToText();
-        } else if (key === 'home') {
-          preventDefaultAndStopPropagation();
-          this.userAction('MoveCursorsByLine', 'left');
-          this.scrollToText();
-        } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
-          preventDefaultAndStopPropagation();
-          this.userAction('InsertText', e.key);
-          this.scrollToText();
-        } else if (
-          revComplement &&
-          this.value[this.user.cursors[0].selectionStart - 1] === revComplement
-        ) {
-          preventDefaultAndStopPropagation();
-          if (this.value[this.user.cursors[0].selectionStart] === e.key) {
-            this.userAction('MoveCursors', 'right', 1);
-          } else {
-            this.userAction('InsertText', e.key);
-          }
-          this.scrollToText();
-        } else if (
-          // do not complement strings if already in string or comment
-          fwdComplement &&
-          (!strComplement || (strComplement && (!inString && !inComment)))
-        ) {
-          preventDefaultAndStopPropagation();
-          this.userAction('InsertText', e.key + fwdComplement, -1);
-          this.scrollToText();
-        }
-      }
+      );
     },
     scroll: function (e) {
       if (this._selecting) {
@@ -1099,6 +938,203 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
       // Exponential backoff for initialization
       //  Prevents latency on huge page reflows when editor added dynamically
       setTimeout(this.__initialize__.bind(this, backoff * 2), backoff);
+    }
+  }
+};
+
+CPHEditor.prototype.__captureKeydown = function (key, ctrlKey, metaKey, altKey, shiftKey, preventDefaultAndStopPropagation) {
+  this._selecting = false;
+  this._initialSelection = null;
+  var cursor = this.user.cursors[0];
+  var inString = this.inString(cursor.selectionStart);
+  var inComment = this.inComment(cursor.selectionStart);
+  preventDefaultAndStopPropagation = preventDefaultAndStopPropagation || function () {};
+  ctrlKey = !!(metaKey || ((isWindows() || isLinux()) && ctrlKey));
+  var isModified = metaKey || ctrlKey || altKey;
+  var originalKey = key || '';
+  var key = (key || '').toLowerCase();
+  var hotkey = [
+    ['', 'ctrl'][ctrlKey | 0],
+    ['', 'alt'][altKey | 0],
+    ['', 'shift'][shiftKey | 0],
+    key
+  ].filter(function (v) { return !!v; }).join('+');
+  var lang = this.getActiveLanguageDictionary();
+  var fwdComplement = lang.forwardComplements[key] || '';
+  var revComplement = lang.reverseComplements[key] || '';
+  var strComplement = lang.stringComplements[key] || '';
+  if (!key) {
+    preventDefaultAndStopPropagation();
+  } else if (
+    ctrlKey && key === 'v' ||
+    ctrlKey && key === 'x' ||
+    ctrlKey && key === 'c' ||
+    key.endsWith('lock') ||
+    key.startsWith('control') ||
+    key.startsWith('alt') ||
+    key === 'contextmenu' ||
+    key === 'altgraph' ||
+    key === 'os' ||
+    key === 'unidentified'
+  ) {
+    // Do nothing: allow native behavior
+    //  Windows ContextMenu key,
+    //  AltGraphic key and OS key,
+    //  CapsLock,
+    //  Android text input...
+  } else if (this.hotkeys[hotkey]) {
+    preventDefaultAndStopPropagation();
+    this.shortcut(hotkey);
+  } else if (key === 'backspace') {
+    preventDefaultAndStopPropagation();
+    if (altKey) {
+      this.userAction('MoveCursorsByWord', 'left', true);
+      this.userAction('RemoveText', -1);
+      this.scrollToText();
+    } else {
+      if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
+        this.userAction('RemoveText', -1);
+        this.scrollToText();
+      } else {
+        var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
+        var nextCharacter = this.value[this.user.cursors[0].selectionStart];
+        var prevCharacter = this.value[this.user.cursors[0].selectionStart - 1];
+        if (nextCharacter && nextCharacter === lang.forwardComplements[prevCharacter]) {
+          this.userAction('MoveCursors', 'right');
+          this.userAction('RemoveText', -2);
+          this.scrollToText();
+        } else {
+          for (var tabChars = 0; tabChars < lang.tabWidth; tabChars++) {
+            if (selInfo.linesPrefix[selInfo.linesPrefix.length - tabChars - 1] === lang.tabChar) {
+              continue;
+            } else {
+              break;
+            }
+          }
+          if (tabChars) {
+            var removeCount = ((selInfo.linesPrefix.length - tabChars) % lang.tabWidth) || tabChars;
+            this.userAction('RemoveText', -removeCount);
+            this.scrollToText();
+          } else {
+            this.userAction('RemoveText', -1);
+            this.scrollToText();
+          }
+        }
+      }
+    }
+  } else if (key === 'delete') {
+    preventDefaultAndStopPropagation();
+    if (altKey) {
+      this.userAction('MoveCursorsByWord', 'right', true);
+      this.userAction('RemoveText', 1);
+      this.scrollToText();
+    } else {
+      this.userAction('RemoveText', 1);
+      this.scrollToText();
+    }
+  } else if (!isModified && key !== 'shift') {
+    if (key === 'escape') {
+      preventDefaultAndStopPropagation();
+      this.userAction('ResetCursor');
+      if (this.control('find-replace').isVisible()) {
+        this.control('find-replace').hide();
+      }
+      if (this._contextMenu) {
+        this._contextMenu.close();
+      }
+      if (this._autocomplete) {
+        this._autocomplete = null;
+        this.dispatch('autocomplete', this, null, null, null);
+      }
+      this.dispatch('cancel', this);
+    } else if (key === 'enter') {
+      preventDefaultAndStopPropagation();
+      if (this._autocomplete) {
+        this.dispatch(
+          'autocomplete/submit',
+          this,
+          this._autocomplete.name,
+          this._autocomplete.result
+        );
+      } else {
+        this.userAction('InsertText', '\n');
+        this.scrollToText();
+      }
+    } else if (key === 'tab') {
+      if (this.tabout) {
+        return;
+      } else {
+        preventDefaultAndStopPropagation();
+        if (this._autocomplete) {
+          this.dispatch(
+            'autocomplete/submit',
+            this,
+            this._autocomplete.name,
+            this._autocomplete.result
+          );
+        } else if (shiftKey) {
+          this.userAction('RemoveIndent');
+        } else if (this.user.cursors.length <= 1 && !this.user.cursors[0].width()) {
+          if (this._suggestion) {
+            var selInfo = this.user.cursors[0].getSelectionInformation(this.value);
+            this.userAction('MoveCursors', 'right', selInfo.linesSuffix.length);
+            this.userAction('InsertText', this._suggestion.value, this._suggestion.adjust, this._suggestion.cursorLength);
+          } else {
+            this.userAction('InsertText', lang.tabChar.repeat(lang.tabWidth));
+          }
+        } else {
+          this.userAction('AddIndent');
+        }
+        this.scrollToText();
+      }
+    } else if (key.startsWith('arrow')) {
+      preventDefaultAndStopPropagation();
+      var direction = key.slice('arrow'.length);
+      if (this._autocomplete && (direction === 'up' || direction === 'down')) {
+        this.dispatch(
+          'autocomplete/' + direction,
+          this,
+          this._autocomplete.name,
+          this._autocomplete.result
+        );
+      } else {
+        this.userAction('MoveCursors', direction, 1, shiftKey);
+        this.scrollToText();
+      }
+    } else if (key.startsWith('page')) {
+      preventDefaultAndStopPropagation();
+      this.scrollPage(key.slice('page'.length));
+    } else if (key === 'end') {
+      preventDefaultAndStopPropagation();
+      this.userAction('MoveCursorsByLine', 'right');
+      this.scrollToText();
+    } else if (key === 'home') {
+      preventDefaultAndStopPropagation();
+      this.userAction('MoveCursorsByLine', 'left');
+      this.scrollToText();
+    } else if (this.user.cursors.length > 1 || this.user.cursors[0].width()) {
+      preventDefaultAndStopPropagation();
+      this.userAction('InsertText', originalKey);
+      this.scrollToText();
+    } else if (
+      revComplement &&
+      this.value[this.user.cursors[0].selectionStart - 1] === revComplement
+    ) {
+      preventDefaultAndStopPropagation();
+      if (this.value[this.user.cursors[0].selectionStart] === key) {
+        this.userAction('MoveCursors', 'right', 1);
+      } else {
+        this.userAction('InsertText', key);
+      }
+      this.scrollToText();
+    } else if (
+      // do not complement strings if already in string or comment
+      fwdComplement &&
+      (!strComplement || (strComplement && (!inString && !inComment)))
+    ) {
+      preventDefaultAndStopPropagation();
+      this.userAction('InsertText', key + fwdComplement, -1);
+      this.scrollToText();
     }
   }
 };
