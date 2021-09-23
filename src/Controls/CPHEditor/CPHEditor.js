@@ -1908,7 +1908,7 @@ CPHEditor.prototype.__render = function (
       ['line'],
       {
         offset: lineElements.length,
-        style: 'top: ' + (lineElements.length * this.lineHeight) + 'px'
+        style: 'transform: translate3d(0px, ' + (lineElements.length * this.lineHeight) + 'px, 0px)'
       }
     );
     lineFragment.appendChild(lineElement);
@@ -1918,7 +1918,7 @@ CPHEditor.prototype.__render = function (
       ['annotation'],
       {
         offset: lineAnnotationElements.length,
-        style: 'top: ' + (lineAnnotationElements.length * this.lineHeight) + 'px'
+        style: 'transform: translate3d(0px, ' + (lineAnnotationElements.length * this.lineHeight) + 'px, 0px)'
       }
     )
     lineAnnotationFragment.appendChild(lineAnnotationElement);
@@ -1928,7 +1928,7 @@ CPHEditor.prototype.__render = function (
       ['number'],
       {
         offset: lineNumberElements.length,
-        style: 'top: ' + (lineNumberElements.length * this.lineHeight) + 'px'
+        style: 'transform: translate3d(0px, ' + (lineNumberElements.length * this.lineHeight) + 'px, 0px)'
       }
     )
     lineNumberFragment.appendChild(lineNumberElement);

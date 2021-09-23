@@ -1,6 +1,6 @@
 $editor-caret-color: #6090ff;
-$editor-font-size: $font-size-x-small;
-$editor-line-height: ceil($editor-font-size * 1.5);
+$editor-font-size: 13px;
+$editor-line-height: 20px;
 $editor-padding: $size-x-small - 1px;
 $editor-gutter-width: $size-medium * (3 / 2);
 $editor-scrollbar-width: $size-x-small;
@@ -423,7 +423,6 @@ $editor-scrollbar-width-active: $size-x-small * 2;
       }
       div.line {
         width: 10000px;
-        margin-top: $editor-padding;
         transform: translate3d(0px, 0px, 0px);
         position: absolute;
         height: $editor-line-height;
