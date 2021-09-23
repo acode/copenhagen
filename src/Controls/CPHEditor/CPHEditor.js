@@ -800,10 +800,10 @@ CPHEditor.prototype.eventListeners = {
           type === 'deleteContentBackward'
         ) {
           e.stopPropagation();
-          this.__captureKeydown('backspace');
+          this.__captureKeydown('backspace', true);
         } else if (type === 'deleteContentForward') {
           e.stopPropagation();
-          this.__captureKeydown('delete');
+          this.__captureKeydown('delete', true);
         } else if (type === 'insertText') {
           this.userAction('InsertText', text);
           this.scrollToText();
@@ -860,7 +860,9 @@ CPHEditor.prototype.eventListeners = {
     },
     keydown: function capture (e) {
       this.__captureKeydown(
-        e.key, e.ctrlKey, e.metaKey, e.altKey, e.shiftKey,
+        e.key,
+        false,
+        e.ctrlKey, e.metaKey, e.altKey, e.shiftKey,
         function () {
           e.preventDefault();
           e.stopPropagation();
@@ -887,6 +889,35 @@ CPHEditor.prototype.eventListeners = {
       } else {
         this.render(this.value);
       }
+    }
+  },
+  '.mobile-menu button': {
+    focus: function (e) {
+      e.preventDefault();
+      this.focus();
+    }
+  },
+  '.mobile-menu button[name="cph-keypress"]': {
+    click: function (e, el) {
+      var key = el.getAttribute('data-key');
+      if (!key) {
+        key = el.innerText;
+      }
+      key = key.trim();
+      if (key === 'quotation-mark') {
+        key = '"';
+      }
+      this.__captureKeydown(key, true);
+    }
+  },
+  '.mobile-menu button[name="cph-undo"]': {
+    click: function (e) {
+      this.gotoHistory(-1);
+    }
+  },
+  '.mobile-menu button[name="cph-redo"]': {
+    click: function (e) {
+      this.gotoHistory(1);
     }
   }
 };
@@ -942,7 +973,7 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
   }
 };
 
-CPHEditor.prototype.__captureKeydown = function (key, ctrlKey, metaKey, altKey, shiftKey, preventDefaultAndStopPropagation) {
+CPHEditor.prototype.__captureKeydown = function (key, forceInput, ctrlKey, metaKey, altKey, shiftKey, preventDefaultAndStopPropagation) {
   this._selecting = false;
   this._initialSelection = null;
   var cursor = this.user.cursors[0];
@@ -963,6 +994,7 @@ CPHEditor.prototype.__captureKeydown = function (key, ctrlKey, metaKey, altKey, 
   var fwdComplement = lang.forwardComplements[key] || '';
   var revComplement = lang.reverseComplements[key] || '';
   var strComplement = lang.stringComplements[key] || '';
+  console.log('key is?', key);
   if (!key) {
     preventDefaultAndStopPropagation();
   } else if (
@@ -1135,6 +1167,8 @@ CPHEditor.prototype.__captureKeydown = function (key, ctrlKey, metaKey, altKey, 
       preventDefaultAndStopPropagation();
       this.userAction('InsertText', key + fwdComplement, -1);
       this.scrollToText();
+    } else if (forceInput) {
+      this.userAction('InsertText', key);
     }
   }
 };
