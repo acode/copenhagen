@@ -477,6 +477,7 @@
     display: none;
     flex-direction: column;
     position: fixed;
+    z-index: 32768;
     bottom: 0px;
     left: 0px;
     width: 100%;

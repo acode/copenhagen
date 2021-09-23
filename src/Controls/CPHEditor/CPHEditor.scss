@@ -615,6 +615,7 @@ $editor-scrollbar-width-active: $size-x-small * 2;
     display: none;
     flex-direction: column;
     position: fixed;
+    z-index: 32768;
     bottom: 0px;
     left: 0px;
     width: 100%;
