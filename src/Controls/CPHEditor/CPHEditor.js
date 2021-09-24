@@ -89,6 +89,7 @@ function CPHEditor (app, cfg) {
   this._metadata = {};
   this._autocompleteFns = {};
   this._autocomplete = null;
+  this._lastActiveAutocomplete = null;
 
   this._emulationMode = false;
 
@@ -688,6 +689,7 @@ CPHEditor.prototype.eventListeners = {
       if (this._contextMenu) {
         this._contextMenu.close();
       }
+      this._lastActiveAutocomplete = this._autocomplete;
       this._autocomplete = null;
       this.dispatch('blur', this, e);
       this.render(this.value);
@@ -901,12 +903,6 @@ CPHEditor.prototype.eventListeners = {
       }
     }
   },
-  '.mobile-menu': {
-    focus: function (e) {
-      e.preventDefault();
-      this.focus();
-    }
-  },
   '.mobile-menu button[name="cph-keypress"]': {
     click: function (e, el) {
       e.preventDefault();
@@ -930,6 +926,12 @@ CPHEditor.prototype.eventListeners = {
         ctrlKey = true;
       }
       this.focus();
+      if (this._lastActiveAutocomplete) {
+        // make sure we re-populate autocomplete on mobile cursor tab
+        // because this got wiped when we lost focus
+        this._autocomplete = this._lastActiveAutocomplete;
+        this._lastActiveAutocomplete = null;
+      }
       setTimeout(function () { this.__captureKeydown(key, true, ctrlKey, metaKey, altKey, shiftKey); }.bind(this), 1);
     }
   },
