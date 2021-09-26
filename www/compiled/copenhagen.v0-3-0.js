@@ -1574,6 +1574,7 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
 };
 
 CPHEditor.prototype.__mobile_updateWindowSize = function () {
+  visualViewport = visualViewport || {width: window.innerWidth, height: window.innerHeight};
 	this._lastViewportWidth = visualViewport.width;
 	this._lastViewportHeight = visualViewport.height;
 	this._lastOrientation = window.orientation;
@@ -1597,6 +1598,7 @@ CPHEditor.prototype.__mobile_hasOrientationChanged = function () {
 };
 
 CPHEditor.prototype.__mobile_detectKeyboardHeight = function () {
+  visualViewport = visualViewport || {width: window.innerWidth, height: window.innerHeight};
 	if (
     (this._lastViewportHeight - visualViewport.height > 150) &&
     visualViewport.width === this._lastViewportWidth
