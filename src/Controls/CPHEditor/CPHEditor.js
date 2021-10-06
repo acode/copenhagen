@@ -14,6 +14,7 @@ function CPHEditor (app, cfg) {
   this.maxrows = Math.max(1, Math.min(parseInt(cfg.maxrows || cfg.rows) || 30, 30));
   this.tabout = cfg.hasOwnProperty('tabout') && cfg.tabout !== false;
   this.nolines = cfg.hasOwnProperty('nolines') && cfg.nolines !== false;
+  this.mobilekeys = cfg.hasOwnProperty('mobilekeys') && cfg.mobilekeys !== false;
 
   this.history = new CPHHistory(cfg.value);
   this.multiplayer = null;
@@ -145,14 +146,16 @@ function CPHEditor (app, cfg) {
 
   // FUTURE: Mobile support for cursors
   if (isMobile()) {
-    this.element().classList.add('is-mobile');
-    var keyboardPositioner = function () {
-      if (!this._unloaded) {
-        this.__mobile_positionKeyboard();
-        window.requestAnimationFrame(keyboardPositioner);
-      }
-    }.bind(this);
-    keyboardPositioner();
+    if (this.mobilekeys) {
+      this.element().classList.add('is-mobile');
+      var keyboardPositioner = function () {
+        if (!this._unloaded) {
+          this.__mobile_positionKeyboard();
+          window.requestAnimationFrame(keyboardPositioner);
+        }
+      }.bind(this);
+      keyboardPositioner();
+    }
     var selectionchangeListener = function (e) {
       if (this._unloaded) {
         document.removeEventListener('selectionchange', selectionchangeListener);
@@ -1004,7 +1007,7 @@ CPHEditor.prototype.__initialize__ = function (backoff) {
 };
 
 CPHEditor.prototype.__mobile_updateWindowSize = function () {
-  var visualViewport = window.visualViewport || {width: window.innerWidth, height: window.innerHeight};
+  var visualViewport = window['visualViewport'] || {width: window.innerWidth, height: window.innerHeight};
 	this._lastViewportWidth = visualViewport.width;
 	this._lastViewportHeight = visualViewport.height;
 	this._lastOrientation = window.orientation;
@@ -1028,7 +1031,7 @@ CPHEditor.prototype.__mobile_hasOrientationChanged = function () {
 };
 
 CPHEditor.prototype.__mobile_detectKeyboardHeight = function () {
-  var visualViewport = window.visualViewport || {width: window.innerWidth, height: window.innerHeight};
+  var visualViewport = window['visualViewport'] || {width: window.innerWidth, height: window.innerHeight};
 	if (
     (this._lastViewportHeight - visualViewport.height > 150) &&
     visualViewport.width === this._lastViewportWidth
@@ -1054,7 +1057,7 @@ CPHEditor.prototype.__mobile_detectKeyboardHeight = function () {
 
 CPHEditor.prototype.__mobile_positionKeyboard = function () {
   var keyboardHeight = this.__mobile_detectKeyboardHeight();
-  var visualViewport = window.visualViewport || {width: window.innerWidth, height: window.innerHeight};
+  var visualViewport = window['visualViewport'] || {width: window.innerWidth, height: window.innerHeight};
   var viewDelta = window.innerHeight - visualViewport.height;
   var scrollDelta = Math.min(
     0,
