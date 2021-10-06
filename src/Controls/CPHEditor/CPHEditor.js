@@ -146,8 +146,8 @@ function CPHEditor (app, cfg) {
 
   // FUTURE: Mobile support for cursors
   if (isMobile()) {
+    this.element().classList.add('is-mobile');
     if (this.mobilekeys) {
-      this.element().classList.add('is-mobile');
       var keyboardPositioner = function () {
         if (!this._unloaded) {
           this.__mobile_positionKeyboard();
