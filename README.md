@@ -112,7 +112,7 @@ our commercial offering help fund its development.
 # Updates and who to follow
 
 You can follow Autocode team updates on Twitter at
-[@AutocodeHQ](https://twitter.com/AutocodeHQ). The primary
+[@Autocode](https://twitter.com/Autocode). The primary
 author of Copenhagen is [@keithwhor (Keith Horwood)](https://twitter.com/keithwhor)
 with the support of [@Hacubu (Jacob Lee)](https://twitter.com/Hacubu).
 Special thanks to [@threesided (Scott Gamble)](https://twitter.com/threesided)
